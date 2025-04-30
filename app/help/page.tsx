@@ -15,6 +15,16 @@ export default function HelpPage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-3xl">
+      {/* Simple Home Button */}
+      <div className="mb-4">
+        <Link 
+          href="/" 
+          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-md shadow-sm transition-colors inline-block"
+        >
+          Home
+        </Link>
+      </div>
+      
       <h1 className="text-3xl font-bold mb-6">Understanding Adversarial Examples</h1>
       
       <div className="mb-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
@@ -88,15 +98,6 @@ export default function HelpPage() {
           This visualization helps to understand how adversarial examples relate to their original inputs in the feature space, 
           and how they move across decision boundaries.
         </p>
-      </div>
-      
-      <div className="flex justify-center mt-8">
-        <Link 
-          href="/"
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          Return to Dashboard
-        </Link>
       </div>
     </div>
   );

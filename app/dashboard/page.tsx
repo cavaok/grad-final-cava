@@ -2,10 +2,21 @@
 "use client";
 
 import FrobeniusBoxPlot from '@/components/FrobeniusBoxPlot';
+import Link from 'next/link';
 
 export default function DashboardPage() {
   return (
     <div className="container mx-auto p-4">
+      {/* Simple Home Button */}
+      <div className="mb-4">
+        <Link 
+          href="/" 
+          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-md shadow-sm transition-colors inline-block"
+        >
+          Home
+        </Link>
+      </div>
+      
       <h1 className="text-2xl font-bold mb-6">Adversarial Examples Analysis</h1>
       <div className="bg-white rounded-lg shadow-md overflow-x-auto">
         <FrobeniusBoxPlot />
