@@ -18,6 +18,73 @@ const safeParse = (value, fallback = 0) => {
   return value;
 };
 
+// Model ordering and grouping configuration
+const modelConfig = {
+  groups: [
+    {
+      name: "MLP",
+      prefix: "mlp",
+      color: "#7BBCA5", // Green
+      models: ["mlp"]
+    },
+    {
+      name: "Architecture A",
+      prefix: "auto64",
+      color: "#0D47A1", // Blue
+      models: ["auto64_1", "auto64_2", "auto64_3", "auto64_4"]
+    },
+    {
+      name: "Architecture B",
+      prefix: "auto128",
+      color: "#E53935", // Red
+      models: ["auto128_1", "auto128_2", "auto128_3", "auto128_4", "auto128_5", "auto128_6", "auto128_7"]
+    },
+    {
+      name: "Architecture C",
+      prefix: "auto256",
+      color: "#B07732", // Brown
+      models: ["auto256_1", "auto256_2", "auto256_3", "auto256_4", "auto256_5", 
+               "auto256_6", "auto256_7", "auto256_8", "auto256_9", "auto256_10"]
+    },
+    {
+      name: "Architecture D",
+      prefix: "auto512",
+      color: "#6A1B9A", // Purple
+      models: ["auto512_1", "auto512_2", "auto512_3", "auto512_4", "auto512_5", 
+               "auto512_6", "auto512_7", "auto512_8", "auto512_9", "auto512_10"]
+    },
+    {
+      name: "Architecture E",
+      prefix: "funkyauto",
+      color: "#00695C", // Teal
+      models: ["funkyauto_1", "funkyauto_2", "funkyauto_3", "funkyauto_4", "funkyauto_5", 
+               "funkyauto_6", "funkyauto_7", "funkyauto_8", "funkyauto_9", "funkyauto_10"]
+    },
+    {
+      name: "Architecture F",
+      prefix: "hadamard",
+      color: "#F57F17", // Amber
+      models: ["hadamard_1", "hadamard_2", "hadamard_3"]
+    }
+  ],
+  // Extract all model names to use for ordering
+  getAllModels() {
+    return this.groups.flatMap(group => group.models);
+  },
+  // Get group for a model
+  getGroupForModel(modelName) {
+    return this.groups.find(group => 
+      group.models.includes(modelName) || 
+      modelName.startsWith(group.prefix)
+    );
+  },
+  // Extract model number (for x-axis label)
+  getModelNumber(modelName) {
+    const parts = modelName.split('_');
+    return parts.length > 1 ? parts[1] : '';
+  }
+};
+
 const FrobeniusBoxPlot = () => {
   const svgRef = useRef(null);
   const tooltipRef = useRef(null);
@@ -43,33 +110,65 @@ const FrobeniusBoxPlot = () => {
         
         if (countError) throw countError;
         
-        setTotalCount(count || 0);
-        setLoadProgress(prev => ({ ...prev, total: count || 0 }));
+        const totalRows = count || 0;
+        setTotalCount(totalRows);
+        setLoadProgress(prev => ({ ...prev, total: totalRows }));
+        console.log(`Total rows in database with KLD ≤ ${kldThreshold}: ${totalRows}`);
         
         // Group data structure to collect all results
         const groupedData = {};
         let processedCount = 0;
-        let startIndex = 0;
-        const pageSize = 5000; // Larger page size for efficiency
+        let totalRowsFetched = 0;
+        let totalValidRows = 0;
+        let totalInvalidFrob = 0;
         
-        // Fetch data in batches
-        let hasMoreData = true;
+        // Adjust to Supabase's apparent 1000 row limit
+        const pageSize = 1000; // Set to 1000 to match Supabase's limit
         
-        while (hasMoreData) {
+        // Calculate how many pages we need to fetch
+        const totalPages = Math.ceil(totalRows / pageSize);
+        console.log(`Total rows: ${totalRows}, total pages: ${totalPages}`);
+        
+        // Fetch all pages
+        for (let page = 0; page < totalPages; page++) {
+          const startIndex = page * pageSize;
+          
+          // Display progress every 5 pages to avoid console spam
+          if (page % 5 === 0 || page === totalPages - 1) {
+            console.log(`Fetching page ${page + 1}/${totalPages}, rows ${startIndex} to ${startIndex + pageSize - 1}`);
+          }
+          
           const { data: pageData, error: pageError } = await supabase
             .from('adversarial_examples')
             .select('model_name, frob, label_kld')
             .lte('label_kld', kldThreshold)
             .range(startIndex, startIndex + pageSize - 1);
           
-          if (pageError) throw pageError;
+          if (pageError) {
+            console.error(`Error fetching page ${page + 1}:`, pageError);
+            throw pageError;
+          }
+          
+          totalRowsFetched += pageData.length;
+          
+          // Display progress every 5 pages to avoid console spam
+          if (page % 5 === 0 || page === totalPages - 1) {
+            console.log(`Received ${pageData.length} rows for page ${page + 1}`);
+          }
+          
+          // Validate and log details about the frob values in this batch
+          let pageValidRows = 0;
+          let pageInvalidFrob = 0;
           
           // Process this batch of data
           pageData.forEach(item => {
             // Skip items with invalid frob values
             if (item.frob === null || item.frob === undefined || isNaN(item.frob)) {
+              pageInvalidFrob++;
               return;
             }
+            
+            pageValidRows++;
             
             if (!groupedData[item.model_name]) {
               groupedData[item.model_name] = [];
@@ -77,29 +176,54 @@ const FrobeniusBoxPlot = () => {
             groupedData[item.model_name].push(item.frob);
           });
           
+          totalValidRows += pageValidRows;
+          totalInvalidFrob += pageInvalidFrob;
+          
+          // Only log detailed stats occasionally to avoid console spam
+          if (page % 5 === 0 || page === totalPages - 1 || pageInvalidFrob > 0) {
+            console.log(`Page ${page + 1} stats: Valid frob values: ${pageValidRows}, Invalid frob values: ${pageInvalidFrob}`);
+          }
+          
           processedCount += pageData.length;
-          startIndex += pageSize;
           
           // Update progress
           setLoadProgress({
             current: processedCount,
-            total: count || 0,
-            percentage: Math.round((processedCount / (count || 1)) * 100)
+            total: totalRows,
+            percentage: Math.round((processedCount / totalRows) * 100)
           });
           
-          // Check if we've fetched all data
-          hasMoreData = pageData.length === pageSize;
+          // If we got less data than expected and it's not the last page, log a warning
+          if (pageData.length < pageSize && page < totalPages - 1) {
+            console.warn(`Page ${page + 1} returned fewer rows (${pageData.length}) than expected (${pageSize})`);
+          }
           
-          // If no data was returned, break the loop
-          if (pageData.length === 0) {
-            hasMoreData = false;
+          // Add a small delay to avoid overwhelming the API
+          if (page % 10 === 9) {
+            await new Promise(resolve => setTimeout(resolve, 100));
           }
         }
+        // Log summary statistics about data fetching
+        console.log(`Data fetching summary:`);
+        console.log(`- Total rows in database: ${totalRows}`);
+        console.log(`- Total rows fetched: ${totalRowsFetched}`);
+        console.log(`- Total valid rows: ${totalValidRows}`);
+        console.log(`- Total invalid frob values: ${totalInvalidFrob}`);
+        console.log(`- Data loss percentage: ${((totalRows - totalValidRows) / totalRows * 100).toFixed(2)}%`);
+        
+        // Log the total number of data points collected
+        let totalDataPoints = 0;
+        Object.values(groupedData).forEach(values => {
+          totalDataPoints += values.length;
+        });
+        console.log(`Total data points collected: ${totalDataPoints}`);
+        console.log(`Models found: ${Object.keys(groupedData).length}`);
         
         // Convert to array format for D3
         const formattedData = Object.keys(groupedData).map(model => {
           // Sort values for calculating quartiles
           const values = groupedData[model].sort((a, b) => a - b);
+          console.log(`Model ${model}: ${values.length} data points`);
           
           return {
             model,
@@ -108,14 +232,34 @@ const FrobeniusBoxPlot = () => {
         });
         
         // Filter out models with no valid data
-        const filteredData = formattedData.filter(item => item.values && item.values.length > 0);
+        let filteredData = formattedData.filter(item => item.values && item.values.length > 0);
         
+        // Sort the data according to our predefined order
+        const modelOrder = modelConfig.getAllModels();
+        filteredData.sort((a, b) => {
+          const indexA = modelOrder.indexOf(a.model);
+          const indexB = modelOrder.indexOf(b.model);
+          
+          // If both models are in our order list, use that order
+          if (indexA !== -1 && indexB !== -1) {
+            return indexA - indexB;
+          }
+          // If only one is in the list, prioritize it
+          if (indexA !== -1) return -1;
+          if (indexB !== -1) return 1;
+          
+          // Otherwise, sort alphabetically
+          return a.model.localeCompare(b.model);
+        });
+        
+        console.log(`Final dataset size: ${filteredData.length} models with data`);
         setData(filteredData);
       } catch (err) {
         console.error('Error fetching data:', err);
-        setError('Failed to fetch data from Supabase');
+        setError(`Failed to fetch data from Supabase: ${err.message}`);
       } finally {
         setLoading(false);
+        console.log('Data loading complete');
       }
     };
     
@@ -129,8 +273,8 @@ const FrobeniusBoxPlot = () => {
     d3.select(svgRef.current).selectAll('*').remove();
 
     // Chart dimensions
-    const margin = { top: 40, right: 30, bottom: 90, left: 50 };
-    const width = 1000 - margin.left - margin.right;
+    const margin = { top: 40, right: 30, bottom: 120, left: 50 }; // Increased bottom margin for architecture labels
+    const width = 1200 - margin.left - margin.right; // Wider to accommodate all models
     const height = 500 - margin.top - margin.bottom;
 
     // Create SVG
@@ -169,14 +313,16 @@ const FrobeniusBoxPlot = () => {
       .range([height, 0]);
 
     // Axes
+    // X-axis with model numbers instead of full names
     svg.append('g')
       .attr('transform', `translate(0,${height})`)
-      .call(d3.axisBottom(x))
+      .call(d3.axisBottom(x).tickFormat(d => {
+        // Display only the model number (digits after the underscore)
+        return modelConfig.getModelNumber(d);
+      }))
       .selectAll('text')
-      .style('text-anchor', 'end')
-      .attr('dx', '-.8em')
-      .attr('dy', '.15em')
-      .attr('transform', 'rotate(-45)');
+      .style('text-anchor', 'middle') // Center align the model numbers
+      .attr('dy', '0.5em');
 
     svg.append('g')
       .call(d3.axisLeft(y));
@@ -198,10 +344,72 @@ const FrobeniusBoxPlot = () => {
       .attr('text-anchor', 'middle')
       .text('Frobenius Norm');
 
-    // Color scale for boxes
-    const color = d3.scaleOrdinal()
-      .domain(data.map(d => d.model))
-      .range(d3.schemeCategory10);
+    // Group rectangles for architecture labels
+    const architectureBars = svg.append('g')
+      .attr('class', 'architecture-bars')
+      .attr('transform', `translate(0,${height + 30})`); // Position below the x-axis
+
+    // Draw architecture label bars
+    let currentGroup = null;
+    let groupStartX = 0;
+    let groupEndX = 0;
+
+    data.forEach((modelData, i) => {
+      const modelGroup = modelConfig.getGroupForModel(modelData.model);
+      
+      // If this is the first model or a new group
+      if (!currentGroup || (modelGroup && currentGroup.name !== modelGroup.name)) {
+        // If we were tracking a group, draw its bar
+        if (currentGroup) {
+          const groupWidth = groupEndX - groupStartX + x.bandwidth();
+          
+          // Draw the architecture bar
+          architectureBars.append('rect')
+            .attr('x', groupStartX)
+            .attr('y', 0)
+            .attr('width', groupWidth)
+            .attr('height', 30)
+            .attr('fill', currentGroup.color || '#999')
+            .attr('opacity', 0.8);
+          
+          // Add the architecture label
+          architectureBars.append('text')
+            .attr('x', groupStartX + groupWidth / 2)
+            .attr('y', 20)
+            .attr('text-anchor', 'middle')
+            .attr('fill', 'white')
+            .style('font-weight', 'bold')
+            .text(currentGroup.name);
+        }
+        
+        // Start tracking the new group
+        currentGroup = modelGroup;
+        groupStartX = x(modelData.model);
+      }
+      
+      groupEndX = x(modelData.model);
+    });
+    
+    // Draw the last group bar if we have one
+    if (currentGroup) {
+      const groupWidth = groupEndX - groupStartX + x.bandwidth();
+      
+      architectureBars.append('rect')
+        .attr('x', groupStartX)
+        .attr('y', 0)
+        .attr('width', groupWidth)
+        .attr('height', 30)
+        .attr('fill', currentGroup.color || '#999')
+        .attr('opacity', 0.8);
+      
+      architectureBars.append('text')
+        .attr('x', groupStartX + groupWidth / 2)
+        .attr('y', 20)
+        .attr('text-anchor', 'middle')
+        .attr('fill', 'white')
+        .style('font-weight', 'bold')
+        .text(currentGroup.name);
+    }
 
     // Draw box plots
     data.forEach((modelData, i) => {
@@ -209,6 +417,10 @@ const FrobeniusBoxPlot = () => {
       
       // Skip if no valid values
       if (!values || values.length === 0) return;
+      
+      // Get the appropriate color for this model
+      const modelGroup = modelConfig.getGroupForModel(modelData.model);
+      const boxColor = modelGroup ? modelGroup.color : d3.schemeCategory10[i % 10];
       
       // Calculate quartiles safely
       let q1, median, q3, min, max, iqr, outliers;
@@ -230,7 +442,6 @@ const FrobeniusBoxPlot = () => {
       
       const boxWidth = x.bandwidth();
       const boxX = x(modelData.model);
-      const boxColor = color(modelData.model);
       
       // Draw vertical line (min to max)
       svg.append('line')
@@ -386,7 +597,6 @@ const FrobeniusBoxPlot = () => {
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-500">
               Showing {totalExamples.toLocaleString()} examples across {data.length} models
-              {totalCount > 0 && ` (${((totalExamples / totalCount) * 100).toFixed(1)}% of ${totalCount.toLocaleString()} total)`}
             </span>
           </div>
         </div>
@@ -416,7 +626,7 @@ const FrobeniusBoxPlot = () => {
       {!loading && !error && (!data || data.length === 0) && <div className="p-4">No data available for the current KLD threshold</div>}
       
       {!loading && !error && data && data.length > 0 && (
-        <>
+        <div className="overflow-x-auto">
           <div ref={tooltipRef} className="absolute opacity-0 pointer-events-none"></div>
           <svg ref={svgRef}></svg>
           <div className="mt-4 text-sm text-gray-600">
@@ -440,7 +650,7 @@ const FrobeniusBoxPlot = () => {
               {totalCount > 0 && ` (${((totalExamples / totalCount) * 100).toFixed(1)}%)`}
             </p>
           </div>
-        </>
+        </div>
       )}
     </div>
   );
