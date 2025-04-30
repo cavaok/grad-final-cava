@@ -22,46 +22,46 @@ const safeParse = (value, fallback = 0) => {
 const modelConfig = {
   groups: [
     {
-      name: "MLP",
+      name: "*",
       prefix: "mlp",
       color: "#7BBCA5", // Green
       models: ["mlp"]
     },
     {
-      name: "Architecture A",
+      name: "A",
       prefix: "auto64",
       color: "#0D47A1", // Blue
       models: ["auto64_1", "auto64_2", "auto64_3", "auto64_4"]
     },
     {
-      name: "Architecture B",
+      name: "B",
       prefix: "auto128",
       color: "#E53935", // Red
       models: ["auto128_1", "auto128_2", "auto128_3", "auto128_4", "auto128_5", "auto128_6", "auto128_7"]
     },
     {
-      name: "Architecture C",
+      name: "C",
       prefix: "auto256",
       color: "#B07732", // Brown
       models: ["auto256_1", "auto256_2", "auto256_3", "auto256_4", "auto256_5", 
                "auto256_6", "auto256_7", "auto256_8", "auto256_9", "auto256_10"]
     },
     {
-      name: "Architecture D",
+      name: "D",
       prefix: "auto512",
       color: "#6A1B9A", // Purple
       models: ["auto512_1", "auto512_2", "auto512_3", "auto512_4", "auto512_5", 
                "auto512_6", "auto512_7", "auto512_8", "auto512_9", "auto512_10"]
     },
     {
-      name: "Architecture E",
+      name: "E",
       prefix: "funkyauto",
       color: "#00695C", // Teal
       models: ["funkyauto_1", "funkyauto_2", "funkyauto_3", "funkyauto_4", "funkyauto_5", 
                "funkyauto_6", "funkyauto_7", "funkyauto_8", "funkyauto_9", "funkyauto_10"]
     },
     {
-      name: "Architecture F",
+      name: "F",
       prefix: "hadamard",
       color: "#F57F17", // Amber
       models: ["hadamard_1", "hadamard_2", "hadamard_3"]
@@ -298,12 +298,14 @@ const FrobeniusBoxPlot = () => {
     const tooltip = d3.select(tooltipRef.current)
       .style('opacity', 0)
       .attr('class', 'tooltip')
-      .style('background-color', 'white')
+      .style('background-color', 'rgba(0, 0, 0, 0.8)')
+      .style('color', 'white')
       .style('border', 'solid')
       .style('border-width', '1px')
       .style('border-radius', '5px')
       .style('padding', '10px')
-      .style('position', 'absolute');
+      .style('position', 'absolute')
+      .style('font-weight', 'bold');
 
     // X scale (categorical)
     const x = d3.scaleBand()
@@ -332,10 +334,15 @@ const FrobeniusBoxPlot = () => {
       }))
       .selectAll('text')
       .style('text-anchor', 'middle') // Center align the model numbers
-      .attr('dy', '0.5em');
+      .attr('dy', '0.5em')
+      .style('fill', '#7C807C')
+      .style('font-weight', 'bold');
 
     svg.append('g')
-      .call(d3.axisLeft(y));
+      .call(d3.axisLeft(y))
+      .selectAll('text')
+      .style('fill', '#7C807C')
+      .style('font-weight', 'bold');
 
     // Title
     svg.append('text')
@@ -352,7 +359,8 @@ const FrobeniusBoxPlot = () => {
       .attr('y', -margin.left + 15)
       .attr('x', -height / 2)
       .attr('text-anchor', 'middle')
-      .text('Frobenius Norm');
+      .text('Frobenius Norm')
+      .style('fill', '#7C807C');
 
     // Group rectangles for architecture labels
     const architectureBars = svg.append('g')
@@ -476,7 +484,6 @@ const FrobeniusBoxPlot = () => {
             .duration(200)
             .style('opacity', 0.9);
           tooltip.html(`
-            <strong>${modelData.model}</strong><br/>
             Min: ${safeParse(min).toFixed(4)}<br/>
             Q1: ${safeParse(q1).toFixed(4)}<br/>
             Median: ${safeParse(median).toFixed(4)}<br/>
@@ -535,15 +542,14 @@ const FrobeniusBoxPlot = () => {
             .attr('cx', boxX + boxWidth / 2)
             .attr('cy', y(safeParse(outlier)))
             .attr('r', 3)
-            .attr('fill', 'red')
-            .attr('stroke', '#000')
-            .attr('stroke-width', 0.5)
+            .attr('fill', boxColor)
+            .attr('fill-opacity', 0.2)
+            .attr('stroke', 'none')
             .on('mouseover', function(event) {
               tooltip.transition()
                 .duration(200)
                 .style('opacity', 0.9);
               tooltip.html(`
-                <strong>${modelData.model}</strong><br/>
                 Outlier value: ${safeParse(outlier).toFixed(4)}
               `)
                 .style('left', (event.pageX + 10) + 'px')
@@ -600,7 +606,7 @@ const FrobeniusBoxPlot = () => {
       <div className="mb-6 bg-gray-100 p-4 rounded-lg shadow-sm">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex-1">
-            <h2 className="text-lg font-semibold">Filter Controls</h2>
+            <h2 className="text-lg text-black font-semibold">Filter Controls</h2>
           </div>
           <div className="flex items-center gap-2">
             <label htmlFor="kld-input" className="font-medium text-gray-700">
@@ -614,7 +620,7 @@ const FrobeniusBoxPlot = () => {
               max="1"
               value={kldInput}
               onChange={handleKldInputChange}
-              className="w-24 p-2 border border-gray-300 rounded shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+              className="w-24 p-2 border border-gray-300 rounded shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-black font-medium"
             />
           </div>
           <div className="flex items-center gap-2">
@@ -628,7 +634,7 @@ const FrobeniusBoxPlot = () => {
               min="0"
               value={frobInput}
               onChange={handleFrobInputChange}
-              className="w-24 p-2 border border-gray-300 rounded shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+              className="w-24 p-2 border border-gray-300 rounded shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 text-black font-medium"
             />
           </div>
           <div>
@@ -690,11 +696,11 @@ const FrobeniusBoxPlot = () => {
             </p>
             <p className="mt-2">
               <strong>Current Filters:</strong> 
-              <ul className="list-disc pl-5 mt-1">
+            </p>
+            <ul className="list-disc pl-5 mt-1">
                 <li>KLD ≤ {kldThreshold}</li>
                 <li>Frobenius Norm ≤ {frobThreshold}</li>
-              </ul>
-            </p>
+            </ul>
             <p className="mt-2">
               <strong>Data Details:</strong> Visualizing {totalExamples.toLocaleString()} examples from a total of {totalCount.toLocaleString()} in the database
               {totalCount > 0 && ` (${((totalExamples / totalCount) * 100).toFixed(1)}%)`}
