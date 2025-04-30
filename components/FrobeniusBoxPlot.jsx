@@ -91,7 +91,15 @@ const FrobeniusBoxPlot = () => {
   const [data, setData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  
+  // Current applied filter values
   const [kldThreshold, setKldThreshold] = useState(0.07);
+  const [frobThreshold, setFrobThreshold] = useState(10);
+  
+  // Input values for filters (can be changed without triggering re-fetch)
+  const [kldInput, setKldInput] = useState(0.07);
+  const [frobInput, setFrobInput] = useState(10);
+  
   const [totalCount, setTotalCount] = useState(0);
   const [loadProgress, setLoadProgress] = useState({ current: 0, total: 0, percentage: 0 });
 
@@ -106,7 +114,8 @@ const FrobeniusBoxPlot = () => {
         const { count, error: countError } = await supabase
           .from('adversarial_examples')
           .select('*', { count: 'exact', head: true })
-          .lte('label_kld', kldThreshold);
+          .lte('label_kld', kldThreshold)
+          .lte('frob', frobThreshold); // Added frob threshold filter
         
         if (countError) throw countError;
         
@@ -142,6 +151,7 @@ const FrobeniusBoxPlot = () => {
             .from('adversarial_examples')
             .select('model_name, frob, label_kld')
             .lte('label_kld', kldThreshold)
+            .lte('frob', frobThreshold) // Added frob threshold filter
             .range(startIndex, startIndex + pageSize - 1);
           
           if (pageError) {
@@ -334,7 +344,7 @@ const FrobeniusBoxPlot = () => {
       .attr('text-anchor', 'middle')
       .style('font-size', '16px')
       .style('font-weight', 'bold')
-      .text(`Frobenius Norm Distribution by Model (KLD ≤ ${kldThreshold})`);
+      .text(`Frobenius Norm Distribution by Model (KLD ≤ ${kldThreshold}, Frobenius Norm ≤ ${frobThreshold})`);
 
     // Y-axis label
     svg.append('text')
@@ -561,11 +571,24 @@ const FrobeniusBoxPlot = () => {
 
   }, [data, loading, error, kldThreshold]);
 
-  // Handle KLD threshold change
-  const handleKldChange = (e) => {
+  // Handle KLD input change
+  const handleKldInputChange = (e) => {
     let value = parseFloat(e.target.value);
     if (isNaN(value)) value = 0.07; // Default to 0.07 if input is invalid
-    setKldThreshold(value);
+    setKldInput(value);
+  };
+
+  // Handle Frobenius norm input change
+  const handleFrobInputChange = (e) => {
+    let value = parseFloat(e.target.value);
+    if (isNaN(value)) value = 10; // Default to 10 if input is invalid
+    setFrobInput(value);
+  };
+  
+  // Apply filters and trigger data fetch
+  const applyFilters = () => {
+    setKldThreshold(kldInput);
+    setFrobThreshold(frobInput);
   };
 
   // Calculate total examples across all models
@@ -577,24 +600,47 @@ const FrobeniusBoxPlot = () => {
       <div className="mb-6 bg-gray-100 p-4 rounded-lg shadow-sm">
         <div className="flex flex-wrap items-center gap-4">
           <div className="flex-1">
-            <h2 className="text-lg font-semibold">Adversarial Examples Analysis</h2>
+            <h2 className="text-lg font-semibold">Filter Controls</h2>
           </div>
           <div className="flex items-center gap-2">
-            <label htmlFor="kld-threshold" className="font-medium text-gray-700">
+            <label htmlFor="kld-input" className="font-medium text-gray-700">
               KLD Threshold:
             </label>
             <input
-              id="kld-threshold"
+              id="kld-input"
               type="number"
               step="0.01"
               min="0"
               max="1"
-              value={kldThreshold}
-              onChange={handleKldChange}
+              value={kldInput}
+              onChange={handleKldInputChange}
               className="w-24 p-2 border border-gray-300 rounded shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
             />
           </div>
           <div className="flex items-center gap-2">
+            <label htmlFor="frob-input" className="font-medium text-gray-700">
+              Frobenius Norm:
+            </label>
+            <input
+              id="frob-input"
+              type="number"
+              step="0.5"
+              min="0"
+              value={frobInput}
+              onChange={handleFrobInputChange}
+              className="w-24 p-2 border border-gray-300 rounded shadow-sm focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+            />
+          </div>
+          <div>
+            <button
+              onClick={applyFilters}
+              disabled={loading}
+              className="px-4 py-2 bg-blue-600 text-white rounded shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Loading...' : 'FILTER'}
+            </button>
+          </div>
+          <div className="flex items-center gap-2 flex-grow">
             <span className="text-sm text-gray-500">
               Showing {totalExamples.toLocaleString()} examples across {data.length} models
             </span>
@@ -643,7 +689,11 @@ const FrobeniusBoxPlot = () => {
               adversarial attacks, as they require larger perturbations to cause misclassification.
             </p>
             <p className="mt-2">
-              <strong>Current Filter:</strong> Only showing examples with KLD ≤ {kldThreshold}
+              <strong>Current Filters:</strong> 
+              <ul className="list-disc pl-5 mt-1">
+                <li>KLD ≤ {kldThreshold}</li>
+                <li>Frobenius Norm ≤ {frobThreshold}</li>
+              </ul>
             </p>
             <p className="mt-2">
               <strong>Data Details:</strong> Visualizing {totalExamples.toLocaleString()} examples from a total of {totalCount.toLocaleString()} in the database
