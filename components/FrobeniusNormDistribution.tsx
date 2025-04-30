@@ -3,7 +3,6 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import {
   ComposedChart,
-  BoxPlot,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -27,7 +26,7 @@ const FrobeniusNormDistribution = () => {
   const [showOutliers, setShowOutliers] = useState(true);
   const [showReferenceLine, setShowReferenceLine] = useState(true);
   const [threshold, setThreshold] = useState(2.0);
-  const [selectedModels, setSelectedModels] = useState([]);
+  const [selectedModels, setSelectedModels] = useState<never[]>([]);
   const [availableModels, setAvailableModels] = useState([]);
 
   useEffect(() => {
@@ -45,7 +44,7 @@ const FrobeniusNormDistribution = () => {
         
         // Get unique model names
         const uniqueModels = [...new Set(modelData.map(item => item.model_name))];
-        setAvailableModels(uniqueModels);
+        setAvailableModels(uniqueModels as never[]);
         
         // By default, select all models (or limit to 10 if there are too many)
         setSelectedModels(uniqueModels.slice(0, Math.min(10, uniqueModels.length)));

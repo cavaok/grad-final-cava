@@ -43,13 +43,13 @@ export const fetchModelStatistics = async () => {
   if (error) throw error;
   
   // Group by model_name
-  const groupedData = data.reduce((acc, curr) => {
+  const groupedData: { [key: string]: number[] } = data.reduce((acc, curr) => {
     if (!acc[curr.model_name]) {
       acc[curr.model_name] = [];
     }
     acc[curr.model_name].push(curr.frob);
     return acc;
-  }, {});
+  }, {} as { [key: string]: number[] });
   
   // Calculate statistics for each model
   const statistics = Object.entries(groupedData).map(([model, values]) => {
