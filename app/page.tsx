@@ -5,16 +5,16 @@ export default function Home() {
   return (
     <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
       <main className="flex flex-col gap-[32px] row-start-2 items-center max-w-3xl text-center">
-        <h1 className="text-4xl font-bold mb-2">Adversarial Examples Dashboard</h1>
-        
+        <h1 className="text-4xl font-bold mb-2">Investigating Adversarial Examples as a Universal Property of Trainable Models</h1>
+        <h2 className="text-2xl font-semibold mb-4">Interactive Results Dashboard</h2>
         <div className="mb-4 text-lg">
           <p className="mb-6">
-            An interactive exploration of adversarial examples in machine learning models.
-            This project analyzes perturbations that cause models to misclassify inputs
-            while remaining visually similar to humans.
+            Hi! I'm Olivia. I just defended my MS Thesis in Data Science, and this is an interactive exploration of my results.
+            Overall, these visualizations are designed to help you understand the presence of adversarial examples across a wide variety of trainable models.
           </p>
-          <p>
-            Graduate research by Alex Cava, Computer Science Department.
+
+          <p className="mb-6">
+          Click <Link href="/help" className="text-blue-500 hover:underline">Learn More</Link> in the cards below if you are interested to learn about my thesis, the data, and the metrics used in this dashboard. Otherwise, start exploring via the other links! 
           </p>
         </div>
 
@@ -78,7 +78,7 @@ export default function Home() {
         </div>
       </main>
       <footer className="row-start-3 text-center text-sm text-gray-500 dark:text-gray-400">
-        <p>© 2025 Computer Science Department - Adversarial ML Research</p>
+        <p>CS 573 Data Visualization Final Project @ Worcester Polytechnic Institute</p>
       </footer>
     </div>
   );
