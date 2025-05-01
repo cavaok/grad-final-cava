@@ -24,47 +24,54 @@ const modelConfig = {
     {
       name: "*",
       prefix: "mlp",
-      color: "#AD03DE", // Green
-      models: ["mlp"]
+      color: "#AD03DE", // Purple
+      models: ["mlp"],
+      description: "Baseline Performance by a Multilayer Perceptron"
     },
     {
       name: "A",
       prefix: "auto64",
       color: "#0D0877", // Blue
-      models: ["auto64_1", "auto64_2", "auto64_3", "auto64_4"]
+      models: ["auto64_1", "auto64_2", "auto64_3", "auto64_4"],
+      description: "Base Architecture A: Autoencoder 64 Bottleneck (Iterations 1-4)"
     },
     {
       name: "B",
       prefix: "auto128",
       color: "#B12A90", // Red
-      models: ["auto128_1", "auto128_2", "auto128_3", "auto128_4", "auto128_5", "auto128_6", "auto128_7"]
+      models: ["auto128_1", "auto128_2", "auto128_3", "auto128_4", "auto128_5", "auto128_6", "auto128_7"],
+      description: "Base Architecture B: Autoencoder 128 Bottleneck (Iterations 1-7)"
     },
     {
       name: "C",
       prefix: "auto256",
       color: "#E16462", // orange
       models: ["auto256_1", "auto256_2", "auto256_3", "auto256_4", "auto256_5", 
-               "auto256_6", "auto256_7", "auto256_8", "auto256_9", "auto256_10"]
+               "auto256_6", "auto256_7", "auto256_8", "auto256_9", "auto256_10"],
+      description: "Base Architecture C: Autoencoder 256 Bottleneck (Iterations 1-10)"
     },
     {
       name: "D",
       prefix: "auto512",
       color: "#FCA636", // peach
       models: ["auto512_1", "auto512_2", "auto512_3", "auto512_4", "auto512_5", 
-               "auto512_6", "auto512_7", "auto512_8", "auto512_9", "auto512_10"]
+               "auto512_6", "auto512_7", "auto512_8", "auto512_9", "auto512_10"],
+      description: "Base Architecture D: Autoencoder 512 Bottleneck (Iterations 1-10)"
     },
     {
       name: "E",
       prefix: "funkyauto",
       color: "#FFCF20", // yellow
       models: ["funkyauto_1", "funkyauto_2", "funkyauto_3", "funkyauto_4", "funkyauto_5", 
-               "funkyauto_6", "funkyauto_7", "funkyauto_8", "funkyauto_9", "funkyauto_10"]
+               "funkyauto_6", "funkyauto_7", "funkyauto_8", "funkyauto_9", "funkyauto_10"],
+      description: "Base Architecture E: Autoencoder No Bottleneck (Iterations 1-10)"
     },
     {
       name: "F",
       prefix: "hadamard",
       color: "#DCE319", // Amber
-      models: ["hadamard_1", "hadamard_2", "hadamard_3"]
+      models: ["hadamard_1", "hadamard_2", "hadamard_3"],
+      description: "Base Architecture F: Hadamard Model (Iterations 1-3)"
     }
   ],
   // Extract all model names to use for ordering
@@ -277,7 +284,7 @@ const FrobeniusBoxPlot = () => {
     
     fetchData();
 
-  }, [kldThreshold]); // Re-fetch when KLD threshold changes
+  }, [kldThreshold, frobThreshold]); // Re-fetch when KLD threshold changes
 
   useEffect(() => {
     if (loading || error || !data || data.length === 0) return;
@@ -374,7 +381,7 @@ const FrobeniusBoxPlot = () => {
     let currentGroup = null;
     let groupStartX = 0;
     let groupEndX = 0;
-
+    
     data.forEach((modelData, i) => {
       const modelGroup = modelConfig.getGroupForModel(modelData.model);
       
@@ -383,15 +390,42 @@ const FrobeniusBoxPlot = () => {
         // If we were tracking a group, draw its bar
         if (currentGroup) {
           const groupWidth = groupEndX - groupStartX + x.bandwidth();
+          const groupDescription = currentGroup.description || `Architecture ${currentGroup.name}`;
           
           // Draw the architecture bar
-          architectureBars.append('rect')
+          const archBar = architectureBars.append('rect')
             .attr('x', groupStartX)
             .attr('y', 0)
             .attr('width', groupWidth)
             .attr('height', 30)
             .attr('fill', currentGroup.color || '#999')
-            .attr('opacity', 0.8);
+            .attr('opacity', 0.8)
+            .style('cursor', 'pointer')
+            // Store the description as a data attribute
+            .attr('data-description', groupDescription);
+          
+          // Add tooltip behavior
+          archBar
+            .on('mouseover', function(event) {
+              // Get the description from the data attribute of THIS specific element
+              const description = d3.select(this).attr('data-description');
+              
+              tooltip.transition()
+                .duration(200)
+                .style('opacity', 0.9);
+              tooltip.html(`
+                <div style="font-weight: bold; padding: 4px 8px;">
+                  ${description}
+                </div>
+              `)
+                .style('left', (event.pageX + 10) + 'px')
+                .style('top', (event.pageY - 28) + 'px');
+            })
+            .on('mouseout', function() {
+              tooltip.transition()
+                .duration(500)
+                .style('opacity', 0);
+            });
           
           // Add the architecture label
           architectureBars.append('text')
@@ -414,14 +448,41 @@ const FrobeniusBoxPlot = () => {
     // Draw the last group bar if we have one
     if (currentGroup) {
       const groupWidth = groupEndX - groupStartX + x.bandwidth();
+      const groupDescription = currentGroup.description || `Architecture ${currentGroup.name}`;
       
-      architectureBars.append('rect')
+      const archBar = architectureBars.append('rect')
         .attr('x', groupStartX)
         .attr('y', 0)
         .attr('width', groupWidth)
         .attr('height', 30)
         .attr('fill', currentGroup.color || '#999')
-        .attr('opacity', 0.8);
+        .attr('opacity', 0.8)
+        .style('cursor', 'pointer')
+        // Store the description as a data attribute
+        .attr('data-description', groupDescription);
+      
+      // Add tooltip behavior
+      archBar
+        .on('mouseover', function(event) {
+          // Get the description from the data attribute of THIS specific element
+          const description = d3.select(this).attr('data-description');
+          
+          tooltip.transition()
+            .duration(200)
+            .style('opacity', 0.9);
+          tooltip.html(`
+            <div style="font-weight: bold; padding: 4px 8px;">
+              ${description}
+            </div>
+          `)
+            .style('left', (event.pageX + 10) + 'px')
+            .style('top', (event.pageY - 28) + 'px');
+        })
+        .on('mouseout', function() {
+          tooltip.transition()
+            .duration(500)
+            .style('opacity', 0);
+        });
       
       architectureBars.append('text')
         .attr('x', groupStartX + groupWidth / 2)
@@ -600,6 +661,12 @@ const FrobeniusBoxPlot = () => {
         .attr('stroke-dasharray', '5,5') // This creates the dotted line effect
         .attr('pointer-events', 'none'); // Prevents the line from interfering with mouse events
     }  
+    svg.append('text')
+      .attr('transform', `translate(${width / 2},${height + margin.bottom - 10})`)
+      .attr('text-anchor', 'middle')
+      .style('fill', '#7C807C')  // Same color as the "Frobenius Norm" y-axis label
+      .style('font-size', '16px')
+      .text('Trainable Model Architectures');
   }, [data, loading, error, kldThreshold]);
 
   // Handle KLD input change
