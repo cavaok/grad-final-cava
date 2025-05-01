@@ -86,6 +86,9 @@ const PCAVisualization = () => {
     // Add info panel for hover details
     createInfoPanel();
     
+    // Add legend
+    createLegend();
+    
     // Handle mouse movement
     setupMouseInteraction();
     
@@ -183,7 +186,7 @@ const PCAVisualization = () => {
     yLabel.style.color = '#666666';
     yLabel.style.fontSize = '12px';
     yLabel.style.fontWeight = 'bold';
-    yLabel.style.top = '10px';
+    yLabel.style.bottom = '10px';
     yLabel.style.left = '10px';
     containerRef.current.appendChild(yLabel);
     
@@ -198,6 +201,44 @@ const PCAVisualization = () => {
     zLabel.style.top = '10px';
     zLabel.style.right = '10px';
     containerRef.current.appendChild(zLabel);
+  };
+  
+  // Create legend
+  const createLegend = () => {
+    if (!containerRef.current) return;
+    
+    // Remove existing legend if any
+    const existingLegend = document.getElementById('pca-legend');
+    if (existingLegend) {
+      existingLegend.remove();
+    }
+    
+    const legend = document.createElement('div');
+    legend.id = 'pca-legend';
+    legend.style.position = 'absolute';
+    legend.style.bottom = '40px';
+    legend.style.left = '20px';
+    legend.style.background = 'rgba(0, 0, 0, 0.7)';
+    legend.style.color = '#ffffff';
+    legend.style.padding = '10px 15px';
+    legend.style.borderRadius = '5px';
+    legend.style.boxShadow = '0 2px 10px rgba(0, 0, 0, 0.5)';
+    legend.style.zIndex = '1000';
+    legend.style.fontSize = '14px';
+    legend.style.fontWeight = 'bold';
+    
+    legend.innerHTML = `
+      <div style="display: flex; align-items: center; margin-bottom: 8px;">
+        <div style="width: 16px; height: 16px; background: #000; border: 1px solid #fff; border-radius: 50%; margin-right: 10px;"></div>
+        <span>Original Images</span>
+      </div>
+      <div style="display: flex; align-items: center;">
+        <div style="width: 16px; height: 16px; background: #fff; border: 1px solid #aaa; border-radius: 50%; margin-right: 10px; opacity: 0.7;"></div>
+        <span>Adversarial Examples</span>
+      </div>
+    `;
+    
+    containerRef.current.appendChild(legend);
   };
   
   // Create info panel for hover details
@@ -233,6 +274,8 @@ const PCAVisualization = () => {
     let containerRect = containerRef.current.getBoundingClientRect();
     
     const handleMouseMove = (event) => {
+      if (!containerRef.current) return;
+      
       // Calculate mouse position relative to container
       const x = event.clientX - containerRect.left;
       const y = event.clientY - containerRect.top;
@@ -245,7 +288,9 @@ const PCAVisualization = () => {
     };
     
     const handleScroll = () => {
-      containerRect = containerRef.current.getBoundingClientRect();
+      if (containerRef.current) {
+        containerRect = containerRef.current.getBoundingClientRect();
+      }
     };
     
     const handleMouseLeave = () => {
@@ -452,6 +497,9 @@ const PCAVisualization = () => {
     const infoPanel = document.getElementById('info-panel');
     if (infoPanel) infoPanel.remove();
     
+    const legend = document.getElementById('pca-legend');
+    if (legend) legend.remove();
+    
     // Dispose of renderer
     if (rendererRef.current) {
       rendererRef.current.dispose();
@@ -615,9 +663,16 @@ const PCAVisualization = () => {
     controlsRef.current.reset();
   };
   
-  // Handle model change
-  const handleModelChange = (e) => {
-    setModel(e.target.value);
+  // Handle iterate button click
+  const handleIterate = () => {
+    // Get current model number
+    const currentModelNumber = parseInt(model.split('_')[1]);
+    
+    // Calculate next model number (cycle from 1-4)
+    const nextModelNumber = currentModelNumber < 4 ? currentModelNumber + 1 : 1;
+    
+    // Set the next model
+    setModel(`auto64_${nextModelNumber}`);
   };
   
   // Handle reset view button click
@@ -634,20 +689,16 @@ const PCAVisualization = () => {
       )}
       
       <div className="absolute top-4 left-4 z-10 flex space-x-2">
-        <select 
-          value={model}
-          onChange={handleModelChange}
-          className="px-3 py-2 bg-black bg-opacity-70 text-white border border-gray-700 rounded"
+        <button 
+          onClick={handleIterate}
+          className="px-3 py-2 bg-purple-900 bg-opacity-70 text-white border border-gray-700 rounded hover:bg-purple-600 transition-colors"
         >
-          <option value="auto64_1">auto64_1</option>
-          <option value="auto64_2">auto64_2</option>
-          <option value="auto64_3">auto64_3</option>
-          <option value="auto64_4">auto64_4</option>
-        </select>
+          ITERATE: {model.split('_')[1]}
+        </button>
         
         <button 
           onClick={handleResetView}
-          className="px-3 py-2 bg-black bg-opacity-70 text-white border border-gray-700 rounded"
+          className="px-3 py-2 bg-black bg-opacity-70 text-white border border-gray-700 rounded hover:bg-gray-800 transition-colors"
         >
           Reset View
         </button>
