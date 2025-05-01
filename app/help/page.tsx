@@ -183,30 +183,6 @@ export default function HelpPage() {
               </div>
             </div>
           </div>
-          
-          {/* Works Cited */}
-          <div>
-            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-              Works Cited
-            </h2>
-            <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300">
-              <div>
-                <p>Goodfellow, I. J., Shlens, J., & Szegedy, C. (2014). Explaining and harnessing adversarial examples. <em>arXiv preprint arXiv:1412.6572</em>.</p>
-              </div>
-              <div>
-                <p>Szegedy, C., Zaremba, W., Sutskever, I., Bruna, J., Erhan, D., Goodfellow, I., & Fergus, R. (2013). Intriguing properties of neural networks. <em>arXiv preprint arXiv:1312.6199</em>.</p>
-              </div>
-              <div>
-                <p>Kurakin, A., Goodfellow, I., & Bengio, S. (2016). Adversarial examples in the physical world. <em>arXiv preprint arXiv:1607.02533</em>.</p>
-              </div>
-              <div>
-                <p>Papernot, N., McDaniel, P., Goodfellow, I., Jha, S., Celik, Z. B., & Swami, A. (2017). Practical black-box attacks against machine learning. <em>Proceedings of the 2017 ACM on Asia conference on computer and communications security</em>, 506-519.</p>
-              </div>
-              <div>
-                <p>Madry, A., Makelov, A., Schmidt, L., Tsipras, D., & Vladu, A. (2017). Towards deep learning models resistant to adversarial attacks. <em>arXiv preprint arXiv:1706.06083</em>.</p>
-              </div>
-            </div>
-          </div>
         </div>
       </div>
     </div>
