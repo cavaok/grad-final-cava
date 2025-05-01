@@ -1,4 +1,4 @@
-// components/FrobeniusBoxPlot.jsx
+// components/PercentSuccess.jsx
 "use client";
 
 import React, { useEffect, useRef, useState } from 'react';
@@ -92,7 +92,7 @@ const modelConfig = {
   }
 };
 
-const FrobeniusBoxPlot = () => {
+const PercentSuccess = () => {
   const svgRef = useRef(null);
   const tooltipRef = useRef(null);
   const [data, setData] = useState([]);
@@ -110,7 +110,8 @@ const FrobeniusBoxPlot = () => {
   const [totalCount, setTotalCount] = useState(0);
   const [loadProgress, setLoadProgress] = useState({ current: 0, total: 0, percentage: 0 });
 
-
+  // Constants
+  const TOTAL_SAMPLES = 900; // Total number of samples to calculate percentage
 
   useEffect(() => {
     // Fetch data from Supabase with pagination handling
@@ -124,24 +125,21 @@ const FrobeniusBoxPlot = () => {
           .from('adversarial_examples')
           .select('*', { count: 'exact', head: true })
           .lte('label_kld', kldThreshold)
-          .lte('frob', frobThreshold); // Added frob threshold filter
+          .lte('frob', frobThreshold);
         
         if (countError) throw countError;
         
         const totalRows = count || 0;
         setTotalCount(totalRows);
         setLoadProgress(prev => ({ ...prev, total: totalRows }));
-        console.log(`Total rows in database with KLD ≤ ${kldThreshold}: ${totalRows}`);
+        console.log(`Total rows in database with KLD ≤ ${kldThreshold} and Frob ≤ ${frobThreshold}: ${totalRows}`);
         
-        // Group data structure to collect all results
-        const groupedData = {};
+        // Model count dictionary to collect counts by model
+        const modelCounts = {};
         let processedCount = 0;
-        let totalRowsFetched = 0;
-        let totalValidRows = 0;
-        let totalInvalidFrob = 0;
         
         // Adjust to Supabase's apparent 1000 row limit
-        const pageSize = 1000; // Set to 1000 to match Supabase's limit
+        const pageSize = 1000;
         
         // Calculate how many pages we need to fetch
         const totalPages = Math.ceil(totalRows / pageSize);
@@ -151,16 +149,15 @@ const FrobeniusBoxPlot = () => {
         for (let page = 0; page < totalPages; page++) {
           const startIndex = page * pageSize;
           
-          // Display progress every 5 pages to avoid console spam
           if (page % 5 === 0 || page === totalPages - 1) {
             console.log(`Fetching page ${page + 1}/${totalPages}, rows ${startIndex} to ${startIndex + pageSize - 1}`);
           }
           
           const { data: pageData, error: pageError } = await supabase
             .from('adversarial_examples')
-            .select('model_name, frob, label_kld')
+            .select('model_name')
             .lte('label_kld', kldThreshold)
-            .lte('frob', frobThreshold) // Added frob threshold filter
+            .lte('frob', frobThreshold)
             .range(startIndex, startIndex + pageSize - 1);
           
           if (pageError) {
@@ -168,40 +165,13 @@ const FrobeniusBoxPlot = () => {
             throw pageError;
           }
           
-          totalRowsFetched += pageData.length;
-          
-          // Display progress every 5 pages to avoid console spam
-          if (page % 5 === 0 || page === totalPages - 1) {
-            console.log(`Received ${pageData.length} rows for page ${page + 1}`);
-          }
-          
-          // Validate and log details about the frob values in this batch
-          let pageValidRows = 0;
-          let pageInvalidFrob = 0;
-          
-          // Process this batch of data
+          // Count models in this batch
           pageData.forEach(item => {
-            // Skip items with invalid frob values
-            if (item.frob === null || item.frob === undefined || isNaN(item.frob)) {
-              pageInvalidFrob++;
-              return;
+            if (!modelCounts[item.model_name]) {
+              modelCounts[item.model_name] = 0;
             }
-            
-            pageValidRows++;
-            
-            if (!groupedData[item.model_name]) {
-              groupedData[item.model_name] = [];
-            }
-            groupedData[item.model_name].push(item.frob);
+            modelCounts[item.model_name]++;
           });
-          
-          totalValidRows += pageValidRows;
-          totalInvalidFrob += pageInvalidFrob;
-          
-          // Only log detailed stats occasionally to avoid console spam
-          if (page % 5 === 0 || page === totalPages - 1 || pageInvalidFrob > 0) {
-            console.log(`Page ${page + 1} stats: Valid frob values: ${pageValidRows}, Invalid frob values: ${pageInvalidFrob}`);
-          }
           
           processedCount += pageData.length;
           
@@ -212,50 +182,28 @@ const FrobeniusBoxPlot = () => {
             percentage: Math.round((processedCount / totalRows) * 100)
           });
           
-          // If we got less data than expected and it's not the last page, log a warning
-          if (pageData.length < pageSize && page < totalPages - 1) {
-            console.warn(`Page ${page + 1} returned fewer rows (${pageData.length}) than expected (${pageSize})`);
-          }
-          
           // Add a small delay to avoid overwhelming the API
           if (page % 10 === 9) {
             await new Promise(resolve => setTimeout(resolve, 100));
           }
         }
-        // Log summary statistics about data fetching
-        console.log(`Data fetching summary:`);
-        console.log(`- Total rows in database: ${totalRows}`);
-        console.log(`- Total rows fetched: ${totalRowsFetched}`);
-        console.log(`- Total valid rows: ${totalValidRows}`);
-        console.log(`- Total invalid frob values: ${totalInvalidFrob}`);
-        console.log(`- Data loss percentage: ${((totalRows - totalValidRows) / totalRows * 100).toFixed(2)}%`);
         
-        // Log the total number of data points collected
-        let totalDataPoints = 0;
-        Object.values(groupedData).forEach(values => {
-          totalDataPoints += values.length;
-        });
-        console.log(`Total data points collected: ${totalDataPoints}`);
-        console.log(`Models found: ${Object.keys(groupedData).length}`);
-        
-        // Convert to array format for D3
-        const formattedData = Object.keys(groupedData).map(model => {
-          // Sort values for calculating quartiles
-          const values = groupedData[model].sort((a, b) => a - b);
-          console.log(`Model ${model}: ${values.length} data points`);
+        // Convert to array format with percentage calculation
+        const formattedData = Object.keys(modelCounts).map(model => {
+          const count = modelCounts[model];
+          const percentage = (count / TOTAL_SAMPLES) * 100;
+          console.log(`Model ${model}: ${count} samples (${percentage.toFixed(2)}%)`);
           
           return {
             model,
-            values
+            count,
+            percentage
           };
         });
         
-        // Filter out models with no valid data
-        let filteredData = formattedData.filter(item => item.values && item.values.length > 0);
-        
         // Sort the data according to our predefined order
         const modelOrder = modelConfig.getAllModels();
-        filteredData.sort((a, b) => {
+        formattedData.sort((a, b) => {
           const indexA = modelOrder.indexOf(a.model);
           const indexB = modelOrder.indexOf(b.model);
           
@@ -271,20 +219,17 @@ const FrobeniusBoxPlot = () => {
           return a.model.localeCompare(b.model);
         });
         
-        console.log(`Final dataset size: ${filteredData.length} models with data`);
-        setData(filteredData);
+        setData(formattedData);
       } catch (err) {
         console.error('Error fetching data:', err);
         setError(`Failed to fetch data from Supabase: ${err.message}`);
       } finally {
         setLoading(false);
-        console.log('Data loading complete');
       }
     };
     
     fetchData();
-
-  }, [kldThreshold, frobThreshold]); // Re-fetch when KLD threshold changes
+  }, [kldThreshold, frobThreshold]); // Re-fetch when thresholds change
 
   useEffect(() => {
     if (loading || error || !data || data.length === 0) return;
@@ -293,8 +238,8 @@ const FrobeniusBoxPlot = () => {
     d3.select(svgRef.current).selectAll('*').remove();
 
     // Chart dimensions
-    const margin = { top: 40, right: 30, bottom: 120, left: 50 }; // Increased bottom margin for architecture labels
-    const width = 1200 - margin.left - margin.right; // Wider to accommodate all models
+    const margin = { top: 40, right: 30, bottom: 120, left: 60 };
+    const width = 1200 - margin.left - margin.right;
     const height = 500 - margin.top - margin.bottom;
 
     // Create SVG
@@ -304,8 +249,8 @@ const FrobeniusBoxPlot = () => {
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
 
-      //create tooltip div
-      const tooltip = d3.select(tooltipRef.current)
+    // Create tooltip div
+    const tooltip = d3.select(tooltipRef.current)
       .style('opacity', 0)
       .attr('class', 'tooltip')
       .style('background-color', 'rgba(0, 0, 0, 0.85)')
@@ -325,35 +270,29 @@ const FrobeniusBoxPlot = () => {
     const x = d3.scaleBand()
       .domain(data.map(d => d.model))
       .range([0, width])
-      .paddingInner(0.3)
+      .paddingInner(0.1)
       .paddingOuter(0.2);
 
-    // Find min and max values across all models for y-scale
-    const allValues = data.flatMap(d => d.values);
-    const yMin = Math.min(...allValues);
-    const yMax = Math.max(...allValues);
-
-    // Y scale (continuous)
+    // Y scale (percentage, 0-100)
     const y = d3.scaleLinear()
-      .domain([0, safeParse(yMax * 1.1, 10)]) // Start at 0 and add 10% padding on top
+      .domain([0, 100])
       .range([height, 0]);
 
     // Axes
-    // X-axis with model numbers instead of full names
+    // X-axis with model numbers
     svg.append('g')
       .attr('transform', `translate(0,${height})`)
       .call(d3.axisBottom(x).tickFormat(d => {
-        // Display only the model number (digits after the underscore)
         return modelConfig.getModelNumber(d);
       }))
       .selectAll('text')
-      .style('text-anchor', 'middle') // Center align the model numbers
+      .style('text-anchor', 'middle')
       .attr('dy', '0.5em')
       .style('fill', '#7C807C')
       .style('font-weight', 'bold');
 
     svg.append('g')
-      .call(d3.axisLeft(y))
+      .call(d3.axisLeft(y).tickFormat(d => `${d}%`))
       .selectAll('text')
       .style('fill', '#7C807C')
       .style('font-weight', 'bold');
@@ -365,7 +304,7 @@ const FrobeniusBoxPlot = () => {
       .attr('text-anchor', 'middle')
       .style('font-size', '16px')
       .style('font-weight', 'bold')
-      .text(`Frobenius Norm Distribution by Model (KLD ≤ ${kldThreshold}, Frobenius Norm ≤ ${frobThreshold})`);
+      .text(`Sample Count as Percentage of ${TOTAL_SAMPLES} by Model Type (KLD ≤ ${kldThreshold}, Frobenius Norm ≤ ${frobThreshold})`);
 
     // Y-axis label
     svg.append('text')
@@ -373,13 +312,13 @@ const FrobeniusBoxPlot = () => {
       .attr('y', -margin.left + 15)
       .attr('x', -height / 2)
       .attr('text-anchor', 'middle')
-      .text('Frobenius Norm')
+      .text('Percentage of 900 Samples (%)')
       .style('fill', '#7C807C');
 
     // Group rectangles for architecture labels
     const architectureBars = svg.append('g')
       .attr('class', 'architecture-bars')
-      .attr('transform', `translate(0,${height + 30})`); // Position below the x-axis
+      .attr('transform', `translate(0,${height + 30})`);
 
     // Draw architecture label bars
     let currentGroup = null;
@@ -397,7 +336,6 @@ const FrobeniusBoxPlot = () => {
           const groupDescription = currentGroup.description || `Architecture ${currentGroup.name}`;
           
           // Draw the architecture bar
-          // Draw the architecture bar
           const archBar = architectureBars.append('rect')
             .attr('x', groupStartX)
             .attr('y', 0)
@@ -412,18 +350,16 @@ const FrobeniusBoxPlot = () => {
           // Create a larger invisible overlay for better hover detection
           architectureBars.append('rect')
             .attr('x', groupStartX)
-            .attr('y', -5) // Extend slightly above
+            .attr('y', -5)
             .attr('width', groupWidth)
-            .attr('height', 40) // Make taller than the visible bar
-            .attr('fill', 'transparent') // Invisible
+            .attr('height', 40)
+            .attr('fill', 'transparent')
             .style('cursor', 'pointer')
             .attr('data-description', groupDescription)
             .attr('class', 'arch-bar-hover-area')
             .on('mouseover', function(event) {
-              // Get the description from the data attribute
               const description = d3.select(this).attr('data-description');
               
-              // Highlight the corresponding visible bar
               const barX = d3.select(this).attr('x');
               d3.selectAll('.arch-bar')
                 .filter(function() {
@@ -433,9 +369,8 @@ const FrobeniusBoxPlot = () => {
                 .duration(100)
                 .attr('opacity', 1.0);
               
-              // Display the tooltip with a short delay for stability
               tooltip.transition()
-                .duration(50) // Faster appearance
+                .duration(50)
                 .style('opacity', 0.95);
                 
               tooltip.html(`
@@ -447,7 +382,6 @@ const FrobeniusBoxPlot = () => {
                 .style('top', (event.pageY - 40) + 'px');
             })
             .on('mouseout', function() {
-              // Restore original opacity of the visible bar
               const barX = d3.select(this).attr('x');
               d3.selectAll('.arch-bar')
                 .filter(function() {
@@ -457,7 +391,6 @@ const FrobeniusBoxPlot = () => {
                 .duration(200)
                 .attr('opacity', 0.8);
               
-              // Hide tooltip with a slight delay to prevent flickering
               tooltip.transition()
                 .duration(300)
                 .style('opacity', 0);
@@ -466,7 +399,6 @@ const FrobeniusBoxPlot = () => {
           // Add tooltip behavior
           archBar
             .on('mouseover', function(event) {
-              // Get the description from the data attribute of THIS specific element
               const description = d3.select(this).attr('data-description');
               
               tooltip.transition()
@@ -524,18 +456,16 @@ const FrobeniusBoxPlot = () => {
       // Create a larger invisible overlay for better hover detection
       architectureBars.append('rect')
         .attr('x', groupStartX)
-        .attr('y', -5) // Extend slightly above
+        .attr('y', -5)
         .attr('width', groupWidth)
-        .attr('height', 40) // Make taller than the visible bar
-        .attr('fill', 'transparent') // Invisible
+        .attr('height', 40)
+        .attr('fill', 'transparent')
         .style('cursor', 'pointer')
         .attr('data-description', groupDescription)
         .attr('class', 'arch-bar-hover-area')
         .on('mouseover', function(event) {
-          // Get the description from the data attribute
           const description = d3.select(this).attr('data-description');
           
-          // Highlight the corresponding visible bar
           const barX = d3.select(this).attr('x');
           d3.selectAll('.arch-bar')
             .filter(function() {
@@ -545,9 +475,8 @@ const FrobeniusBoxPlot = () => {
             .duration(100)
             .attr('opacity', 1.0);
           
-          // Display the tooltip with a short delay for stability
           tooltip.transition()
-            .duration(50) // Faster appearance
+            .duration(50)
             .style('opacity', 0.95);
             
           tooltip.html(`
@@ -559,7 +488,6 @@ const FrobeniusBoxPlot = () => {
             .style('top', (event.pageY - 40) + 'px');
         })
         .on('mouseout', function() {
-          // Restore original opacity of the visible bar
           const barX = d3.select(this).attr('x');
           d3.selectAll('.arch-bar')
             .filter(function() {
@@ -569,7 +497,6 @@ const FrobeniusBoxPlot = () => {
             .duration(200)
             .attr('opacity', 0.8);
           
-          // Hide tooltip with a slight delay to prevent flickering
           tooltip.transition()
             .duration(300)
             .style('opacity', 0);
@@ -578,7 +505,6 @@ const FrobeniusBoxPlot = () => {
       // Add tooltip behavior
       archBar
         .on('mouseover', function(event) {
-          // Get the description from the data attribute of THIS specific element
           const description = d3.select(this).attr('data-description');
           
           tooltip.transition()
@@ -607,68 +533,27 @@ const FrobeniusBoxPlot = () => {
         .text(currentGroup.name);
     }
 
-    // Draw box plots
-    data.forEach((modelData, i) => {
-      const values = modelData.values;
-      
-      // Skip if no valid values
-      if (!values || values.length === 0) return;
-      
-      // Get the appropriate color for this model
+    // Draw the bars
+    data.forEach(modelData => {
+      // Get the color for this model's group
       const modelGroup = modelConfig.getGroupForModel(modelData.model);
-      const boxColor = modelGroup ? modelGroup.color : d3.schemeCategory10[i % 10];
+      const barColor = modelGroup ? modelGroup.color : '#999';
       
-      // Calculate quartiles safely
-      let q1, median, q3, min, max, iqr, outliers;
-      
-      try {
-        q1 = d3.quantile(values, 0.25) || 0;
-        median = d3.quantile(values, 0.5) || 0;
-        q3 = d3.quantile(values, 0.75) || 0;
-        iqr = q3 - q1;
-        min = Math.max(safeParse(d3.min(values)), safeParse(q1 - 1.5 * iqr));
-        max = Math.min(safeParse(d3.max(values)), safeParse(q3 + 1.5 * iqr));
-        
-        // Outliers (values outside the whiskers)
-        outliers = values.filter(v => v < min || v > max);
-      } catch (err) {
-        console.error('Error calculating box plot statistics:', err);
-        return; // Skip this model if there's an error
-      }
-      
-      const boxWidth = x.bandwidth();
-      const boxX = x(modelData.model);
-      
-      // Draw vertical line (min to max)
-      svg.append('line')
-        .attr('x1', boxX + boxWidth / 2)
-        .attr('x2', boxX + boxWidth / 2)
-        .attr('y1', y(safeParse(min)))
-        .attr('y2', y(safeParse(max)))
-        .attr('stroke', '#000')
-        .attr('stroke-width', 1);
-      
-      // Draw box (q1 to q3)
+      // Draw the bar
       svg.append('rect')
-        .attr('x', boxX)
-        .attr('y', y(safeParse(q3)))
-        .attr('width', boxWidth)
-        .attr('height', safeParse(y(safeParse(q1)) - y(safeParse(q3))))
-        .attr('stroke', '#000')
-        .attr('fill', boxColor)
-        .attr('fill-opacity', 0.3)
+        .attr('x', x(modelData.model))
+        .attr('y', y(modelData.percentage))
+        .attr('width', x.bandwidth())
+        .attr('height', height - y(modelData.percentage))
+        .attr('fill', barColor)
+        .attr('opacity', 0.7)
         .on('mouseover', function(event) {
           tooltip.transition()
             .duration(200)
             .style('opacity', 0.9);
           tooltip.html(`
-            Min: ${safeParse(min).toFixed(4)}<br/>
-            Q1: ${safeParse(q1).toFixed(4)}<br/>
-            Median: ${safeParse(median).toFixed(4)}<br/>
-            Q3: ${safeParse(q3).toFixed(4)}<br/>
-            Max: ${safeParse(max).toFixed(4)}<br/>
-            Count: ${values.length}<br/>
-            Outliers: ${outliers ? outliers.length : 0}
+            <div>Count: ${modelData.count} / ${TOTAL_SAMPLES}</div>
+            <div>Percentage: ${modelData.percentage.toFixed(1)}%</div>
           `)
             .style('left', (event.pageX + 10) + 'px')
             .style('top', (event.pageY - 28) + 'px');
@@ -678,110 +563,34 @@ const FrobeniusBoxPlot = () => {
             .duration(500)
             .style('opacity', 0);
         });
-      
-      // Draw median line
-      svg.append('line')
-        .attr('x1', boxX)
-        .attr('x2', boxX + boxWidth)
-        .attr('y1', y(safeParse(median)))
-        .attr('y2', y(safeParse(median)))
-        .attr('stroke', '#000')
-        .attr('stroke-width', 2);
-      
-      // Draw whiskers (horizontal lines at min and max)
-      svg.append('line')
-        .attr('x1', boxX + boxWidth * 0.25)
-        .attr('x2', boxX + boxWidth * 0.75)
-        .attr('y1', y(safeParse(min)))
-        .attr('y2', y(safeParse(min)))
-        .attr('stroke', '#000')
-        .attr('stroke-width', 1);
-      
-      svg.append('line')
-        .attr('x1', boxX + boxWidth * 0.25)
-        .attr('x2', boxX + boxWidth * 0.75)
-        .attr('y1', y(safeParse(max)))
-        .attr('y2', y(safeParse(max)))
-        .attr('stroke', '#000')
-        .attr('stroke-width', 1);
-      
-      // Draw outliers
-      if (outliers && outliers.length > 0) {
-        // Limit the number of outliers to render for performance
-        const maxOutliersToRender = 100;
-        const outliersToRender = outliers.length > maxOutliersToRender 
-          ? outliers.slice(0, maxOutliersToRender) 
-          : outliers;
-        
-        outliersToRender.forEach(outlier => {
-          if (outlier === null || outlier === undefined || isNaN(outlier)) return;
-          
-          svg.append('circle')
-            .attr('cx', boxX + boxWidth / 2)
-            .attr('cy', y(safeParse(outlier)))
-            .attr('r', 3)
-            .attr('fill', boxColor)
-            .attr('fill-opacity', 0.2)
-            .attr('stroke', 'none')
-            .on('mouseover', function(event) {
-              tooltip.transition()
-                .duration(200)
-                .style('opacity', 0.9);
-              tooltip.html(`
-                Outlier value: ${safeParse(outlier).toFixed(4)}
-              `)
-                .style('left', (event.pageX + 10) + 'px')
-                .style('top', (event.pageY - 28) + 'px');
-            })
-            .on('mouseout', function() {
-              tooltip.transition()
-                .duration(500)
-                .style('opacity', 0);
-            });
-        });
-        
-        // If we limited the outliers, add a note
-        if (outliers.length > maxOutliersToRender) {
-          svg.append('text')
-            .attr('x', boxX + boxWidth / 2)
-            .attr('y', y(safeParse(min)) + 20)
-            .attr('text-anchor', 'middle')
-            .style('font-size', '10px')
-            .style('fill', 'red')
-            .text(`+ ${outliers.length - maxOutliersToRender} more outliers`);
-        }
-      }
     });
-    // Add this after you've drawn all the box plots, right before the end of the second useEffect 
-    // (the one that depends on [data, loading, error, kldThreshold])
 
-    // Find the MLP model data
+    // Add a reference line at MLP model percentage for comparison
     const mlpModel = data.find(model => model.model === "mlp");
-
-    // If MLP model exists and has values, draw the threshold line
-    if (mlpModel && mlpModel.values && mlpModel.values.length > 0) {
-      // Calculate median for MLP model
-      const mlpMedian = d3.quantile(mlpModel.values, 0.5) || 0;
+    if (mlpModel) {
+      const mlpPercentage = mlpModel.percentage;
       
-      // Draw horizontal dotted line at MLP median
       svg.append('line')
         .attr('x1', 0)
         .attr('x2', width)
-        .attr('y1', y(safeParse(mlpMedian)))
-        .attr('y2', y(safeParse(mlpMedian)))
-        .attr('stroke', '#AD03DE') // Using the MLP color from modelConfig
+        .attr('y1', y(mlpPercentage))
+        .attr('y2', y(mlpPercentage))
+        .attr('stroke', '#AD03DE') // Using the MLP color
         .attr('stroke-opacity', 0.5)
         .attr('stroke-width', 2)
-        .attr('stroke-dasharray', '5,5') // This creates the dotted line effect
-        .attr('pointer-events', 'none'); // Prevents the line from interfering with mouse events
-    }  
+        .attr('stroke-dasharray', '5,5')
+        .attr('pointer-events', 'none');
+    }
+
+    // Add x-axis label
     svg.append('text')
       .attr('transform', `translate(${width / 2},${height + margin.bottom - 10})`)
       .attr('text-anchor', 'middle')
-      .style('fill', '#7C807C')  // Same color as the "Frobenius Norm" y-axis label
+      .style('fill', '#7C807C')
       .style('font-size', '16px')
       .text('Trainable Model Architectures');
-  }, [data, loading, error, kldThreshold]);
+
+  }, [data, loading, error, kldThreshold, frobThreshold]);
 
   // Handle KLD input change
   const handleKldInputChange = (e) => {
@@ -803,8 +612,10 @@ const FrobeniusBoxPlot = () => {
     setFrobThreshold(frobInput);
   };
 
-  // Calculate total examples across all models
-  const totalExamples = data.reduce((sum, model) => sum + (model.values ? model.values.length : 0), 0);
+  // Get the average percentage across all models
+  const averagePercentage = data.length > 0 
+    ? data.reduce((sum, model) => sum + model.percentage, 0) / data.length 
+    : 0;
 
   return (
     <div className="p-4 bg-white rounded-lg shadow-md">
@@ -854,7 +665,7 @@ const FrobeniusBoxPlot = () => {
           </div>
           <div className="flex items-center gap-2 flex-grow">
             <span className="text-sm text-gray-500">
-              Showing {totalExamples.toLocaleString()} examples across {data.length} models
+              Average success rate: {averagePercentage.toFixed(1)}% across {data.length} models
             </span>
           </div>
         </div>
@@ -881,7 +692,7 @@ const FrobeniusBoxPlot = () => {
       )}
       
       {error && <div className="text-red-500 p-4">{error}</div>}
-      {!loading && !error && (!data || data.length === 0) && <div className="p-4">No data available for the current KLD threshold</div>}
+      {!loading && !error && (!data || data.length === 0) && <div className="p-4">No data available for the current filter settings</div>}
       
       {!loading && !error && data && data.length > 0 && (
         <div className="overflow-x-auto">
@@ -890,14 +701,13 @@ const FrobeniusBoxPlot = () => {
           <div className="mt-4 text-sm text-gray-600">
             <p className="mb-2"><strong>Visualization Explanation:</strong></p>
             <ul className="list-disc pl-5 space-y-1">
-              <li>Each box represents the interquartile range (IQR) from 25th to 75th percentile</li>
-              <li>The line inside the box shows the median value</li>
-              <li>The whiskers extend to the minimum and maximum values (excluding outliers)</li>
-              <li>Dots represent outliers (values more than 1.5 × IQR from the box edges)</li>
+              <li>Each bar represents the percentage of successful adversarial attacks out of a total of 900</li>
+              <li>The purple dotted line shows the baseline MLP model percentage for comparison</li>
+              <li>Hover over bars for exact counts and percentages</li>
             </ul>
             <p className="mt-2 text-purple-600">
-              <strong>NOTE:</strong> Models with <b>higher Frobenius norm</b> values are generally <b>more robust</b> against 
-              adversarial attacks, as they require larger perturbations to cause misclassification.
+              <strong>NOTE:</strong> Models with <b>lower percentages</b> were harder to attack and had fewer adversarial 
+              examples meeting the KLD and Frobenius norm thresholds, indicating better performance and robustness.
             </p>
           </div>
         </div>
@@ -906,4 +716,4 @@ const FrobeniusBoxPlot = () => {
   );
 };
 
-export default FrobeniusBoxPlot;
+export default PercentSuccess;

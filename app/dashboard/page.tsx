@@ -3,6 +3,8 @@
 
 import FrobeniusBoxPlot from '@/components/FrobeniusBoxPlot';
 import ExploreFrob from '@/components/ExploreFrob';
+import PercentSuccess from '@/components/PercentSuccess';
+import ComparativeRobustness from '@/components/ComparativeRobustness';
 import Link from 'next/link';
 import { useState } from 'react';
 
@@ -21,7 +23,15 @@ export default function DashboardPage() {
         </Link>
       </div>
       
-      <h1 className="text-2xl font-bold mb-6">Adversarial Examples Analysis</h1>
+      <h1 className="text-2xl font-bold mb-2">Analysis of Adversarial Attacks</h1>
+
+      <h2 className="text-xl mb-8">In the following visualizations we will evaluate the attacks through two main metrics: 
+        <li> Perturbation Severity: Quantified by the Frobenius norm (distance between original image and adversarial example) </li>
+        <li> Percent Success: # of Successful Attacks / 900 Total Attacks * 100</li>
+      </h2>
+
+      <h1 className="text-2xl font-bold mb-2">Severity of Perturbations</h1>
+      
       
       {/* Toggle button for the explorer */}
       <div className="mb-4">
@@ -41,8 +51,18 @@ export default function DashboardPage() {
       )}
       
       {/* Main visualization */}
-      <div className="bg-white rounded-lg shadow-md overflow-x-auto">
+      <div className="mb-8 bg-white rounded-lg shadow-md overflow-x-auto">
         <FrobeniusBoxPlot />
+      </div>
+
+      <h1 className="text-2xl font-bold mb-2">Percent Success of Attacks</h1>
+      <div className="mb-8 bg-white rounded-lg shadow-md overflow-x-auto">
+        <PercentSuccess />
+      </div>
+
+      <h1 className="text-2xl font-bold mb-2">Combined Metrics</h1>
+      <div className="mb-8 bg-white rounded-lg shadow-md overflow-x-auto">
+        <ComparativeRobustness />
       </div>
     </div>
   );
