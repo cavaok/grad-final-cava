@@ -2,102 +2,212 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+
+// Import ParticleBackground component with dynamic import to prevent SSR issues
+const ParticleBackground = dynamic(() => import('@/components/ParticleBackground'), {
+  ssr: false
+});
 
 export default function HelpPage() {
+  // State to handle hydration
   const [mounted, setMounted] = useState(false);
-
-  // Avoid hydration mismatch
+  
+  // Handle hydration to prevent mismatch
   useEffect(() => {
     setMounted(true);
   }, []);
-
+  
+  // Don't render until after client-side hydration
   if (!mounted) return null;
-
+  
   return (
-    <div className="container mx-auto px-4 py-8 max-w-3xl">
-      {/* Simple Home Button */}
-      <div className="mb-4">
-        <Link 
-          href="/" 
-          className="px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 rounded-md shadow-sm transition-colors inline-block"
-        >
-          Home
-        </Link>
-      </div>
+    <div className="relative min-h-screen font-[family-name:var(--font-geist-sans)]">
+      {/* Particle Background */}
+      <ParticleBackground />
       
-      <h1 className="text-3xl font-bold mb-6">Understanding Adversarial Examples</h1>
-      
-      <div className="mb-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-        <h2 className="text-2xl font-semibold mb-4">What are Adversarial Examples?</h2>
-        <p className="mb-4">
-          Adversarial examples are inputs to machine learning models that have been specifically designed to cause the model to make a mistake. 
-          These examples are created by adding small, often imperceptible perturbations to valid inputs, resulting in outputs that are 
-          significantly different from what would be expected.
-        </p>
-        <p className="mb-4">
-          For instance, in image classification, an adversarial example might involve adding a carefully calculated pattern of noise to 
-          an image of a panda that causes a model to classify it as a gibbon with high confidence, even though the image still looks 
-          like a panda to human observers.
-        </p>
-      </div>
+      {/* Content Container */}
+      <div className="relative z-10 max-w-4xl mx-auto p-6">
+        {/* Navigation */}
+        <div className="mb-8">
+          <Link 
+            href="/" 
+            className="px-4 py-2 bg-gray-800 hover:bg-gray-700 text-white rounded-lg transition-colors inline-flex items-center"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M9.707 14.707a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 1.414L7.414 9H15a1 1 0 110 2H7.414l2.293 2.293a1 1 0 010 1.414z" clipRule="evenodd" />
+            </svg>
+            Back to Home
+          </Link>
+        </div>
+        
+        {/* Main Content */}
+        <div className="space-y-8 bg-white/90 dark:bg-gray-800/90 p-8 rounded-lg shadow-lg backdrop-blur-sm">
+          {/* Title */}
+          <div className="border-b border-gray-300 dark:border-gray-700 pb-6">
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-4">
+              What's this all about?
+            </h1>
+            <p className="text-lg text-gray-700 dark:text-gray-300">
+              In this interactive dashboard, you can explore the results of my research on adversarial examples. For a quick
+              guide to get started and demo, watch the video below. I will give background information regarding adversarial examples,
+              the dataset collected from my experiments, and the metrics used in the visualizations.
+            </p>
+          </div>
+          
+          {/* Video Section */}
+          <div className="border-b border-gray-300 dark:border-gray-700 pb-6">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+              Getting Started: Quick Background & Viz Demos
+            </h2>
+            <div className="aspect-w-16 aspect-h-9 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
+              <iframe 
+                src="https://www.youtube.com/embed/xvFZjo5PgG0" 
+                title="Presentation on Adversarial Examples" 
+                frameBorder="0" 
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
+                allowFullScreen
+                className="w-full h-full"
+              ></iframe>
+            </div>
+            <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
+              This short screencast presentation gives a brief summary of background information and a demo of the visualizations.
+            </p>
+          </div>
+          
+          {/* Documents Section */}
+          <div className="border-b border-gray-300 dark:border-gray-700 pb-6">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-2">
+              Documents
+            </h2>
+            <h2 className="text-l text-gray-900 dark:text-white mb-4">
+              Here's all the relevant documentation for the project, with the main one being the Process Book.
+            </h2>
 
-      <div className="mb-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-        <h2 className="text-2xl font-semibold mb-4">Key Metrics</h2>
-        
-        <h3 className="text-xl font-medium mb-2">Frobenius Norm</h3>
-        <p className="mb-4">
-          The Frobenius norm measures the magnitude of the perturbation applied to create an adversarial example. 
-          Lower values indicate more subtle changes that are harder to detect visually but still cause misclassification.
-          The Frobenius norm is calculated as the square root of the sum of the squared differences between the original 
-          and adversarial examples.
-        </p>
-        
-        <h3 className="text-xl font-medium mb-2">Kullback-Leibler Divergence (KLD)</h3>
-        <p className="mb-4">
-          KLD measures the dissimilarity between the probability distributions of the model's predictions for the original 
-          and adversarial inputs. A higher KLD indicates a greater change in the model's confidence and predictions.
-        </p>
-        
-        <h3 className="text-xl font-medium mb-2">Mean Squared Error (MSE)</h3>
-        <p className="mb-4">
-          MSE quantifies the average squared difference between the original and adversarial inputs. It provides another 
-          measure of how much the input has been modified to create the adversarial example.
-        </p>
-      </div>
+            <div className="space-y-4">
+              {/* Process Book */}
+              <a 
+                href="/ProcessBook.pdf" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center p-4 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                <div className="bg-purple-100 dark:bg-purple-900 p-3 rounded-full mr-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-600 dark:text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">Process Book</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Detailed documentation of the visualization design process</p>
+                </div>
+              </a>
 
-      <div className="mb-8 p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md">
-        <h2 className="text-2xl font-semibold mb-4">Using the Visualizations</h2>
-        
-        <h3 className="text-xl font-medium mb-2">Frobenius Norm Box Plots</h3>
-        <p className="mb-4">
-          The box plots in the Analytics section show the distribution of Frobenius norm values across different models. 
-          Each box represents a different model, with:
-        </p>
-        <ul className="list-disc pl-6 mb-4">
-          <li>The box representing the interquartile range (25th to 75th percentile)</li>
-          <li>The line inside the box showing the median value</li>
-          <li>The whiskers extending to the minimum and maximum values (excluding outliers)</li>
-          <li>Red dots representing outliers (values more than 1.5 × IQR from the box edges)</li>
-        </ul>
-        <p className="mb-4">
-          Models with lower Frobenius norm values are generally more robust against adversarial attacks, as they 
-          require larger perturbations to cause misclassification.
-        </p>
-        
-        <h3 className="text-xl font-medium mb-2">PCA Visualization</h3>
-        <p className="mb-4">
-          The PCA Projection provides a 3D visualization of adversarial examples in principal component space:
-        </p>
-        <ul className="list-disc pl-6 mb-4">
-          <li>Black spheres represent original inputs</li>
-          <li>White semi-transparent spheres represent adversarial versions</li>
-          <li>Gray lines connect each original input to its adversarial counterpart</li>
-          <li>Hovering over points reveals additional details about each example</li>
-        </ul>
-        <p>
-          This visualization helps to understand how adversarial examples relate to their original inputs in the feature space, 
-          and how they move across decision boundaries.
-        </p>
+              <a 
+                href="/CS573_Final_Prospectus.pdf" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center p-4 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                <div className="bg-purple-100 dark:bg-purple-900 p-3 rounded-full mr-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-purple-600 dark:text-purple-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">Project Prospectus</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Initial proposal of this interactive visualization project</p>
+                </div>
+              </a>
+              
+              {/* MS Thesis */}
+              <a 
+                href="/Olivia_Cava_MS_Thesis.pdf" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center p-4 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+              >
+                <div className="bg-blue-100 dark:bg-blue-900 p-3 rounded-full mr-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-blue-600 dark:text-blue-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 20H5a2 2 0 01-2-2V6a2 2 0 012-2h10a2 2 0 012 2v1m2 13a2 2 0 01-2-2V7m2 13a2 2 0 002-2V9a2 2 0 00-2-2h-2m-4-3H9M7 16h6M7 8h6v4H7V8z" />
+                  </svg>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-900 dark:text-white">MS Thesis</h3>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Complete research thesis on adversarial examples</p>
+                </div>
+              </a>
+            </div>
+          </div>
+          
+          {/* Database Access */}
+          <div className="border-b border-gray-300 dark:border-gray-700 pb-6">
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+              Data Access
+            </h2>
+            <h2 className="text-l text-gray-900 dark:text-white mb-4">
+            This is a private Supabase database (40,440 rows, 12 columns) with the following schema:
+            </h2>
+            <div className="p-4 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg border border-yellow-200 dark:border-yellow-800">
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Database Schema</h3>
+              <div className="bg-gray-800 rounded-lg p-4 overflow-x-auto text-xs text-gray-300 font-mono mb-4">
+                <pre>
+{`create table adversarial_examples (
+    id bigint primary key generated always as identity,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null,
+    case_idx integer not null,
+    model_name text not null,
+    image float[] not null,                    
+    label integer not null,
+    original_prediction float[] not null,     
+    adversarial_image float[] not null,        
+    prediction float[] not null,               
+    label_kld double precision not null,
+    mse double precision not null,
+    frob double precision not null
+);`}
+                </pre>
+              </div>
+              
+              <div className="flex flex-wrap gap-2">
+                <a 
+                  href="mailto:okcava@wpi.edu"
+                  className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg transition-colors text-sm inline-flex items-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M2.003 5.884L10 9.882l7.997-3.998A2 2 0 0016 4H4a2 2 0 00-1.997 1.884z" />
+                    <path d="M18 8.118l-8 4-8-4V14a2 2 0 002 2h12a2 2 0 002-2V8.118z" />
+                  </svg>
+                  Contact for Access
+                </a>
+              </div>
+            </div>
+          </div>
+          
+          {/* Works Cited */}
+          <div>
+            <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
+              Works Cited
+            </h2>
+            <div className="space-y-4 text-sm text-gray-700 dark:text-gray-300">
+              <div>
+                <p>Goodfellow, I. J., Shlens, J., & Szegedy, C. (2014). Explaining and harnessing adversarial examples. <em>arXiv preprint arXiv:1412.6572</em>.</p>
+              </div>
+              <div>
+                <p>Szegedy, C., Zaremba, W., Sutskever, I., Bruna, J., Erhan, D., Goodfellow, I., & Fergus, R. (2013). Intriguing properties of neural networks. <em>arXiv preprint arXiv:1312.6199</em>.</p>
+              </div>
+              <div>
+                <p>Kurakin, A., Goodfellow, I., & Bengio, S. (2016). Adversarial examples in the physical world. <em>arXiv preprint arXiv:1607.02533</em>.</p>
+              </div>
+              <div>
+                <p>Papernot, N., McDaniel, P., Goodfellow, I., Jha, S., Celik, Z. B., & Swami, A. (2017). Practical black-box attacks against machine learning. <em>Proceedings of the 2017 ACM on Asia conference on computer and communications security</em>, 506-519.</p>
+              </div>
+              <div>
+                <p>Madry, A., Makelov, A., Schmidt, L., Tsipras, D., & Vladu, A. (2017). Towards deep learning models resistant to adversarial attacks. <em>arXiv preprint arXiv:1706.06083</em>.</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );

@@ -695,7 +695,7 @@ const PCAVisualization = () => {
           onClick={handleIterate}
           className="px-3 py-2 bg-purple-900 bg-opacity-70 text-white border border-gray-700 rounded hover:bg-purple-600 transition-colors"
         >
-          ITERATE: {model.split('_')[1]}
+          <b>ITERATE: {model.split('_')[1]}</b>
         </button>
         
         <button 

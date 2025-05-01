@@ -1,6 +1,5 @@
 'use client';
 
-import Image from "next/image";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import dynamic from "next/dynamic";
@@ -50,64 +49,40 @@ export default function Home() {
 
         {/* Navigation Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full max-w-3xl mt-8">
-          {/* Learn More Card */}
-          <Link 
-            href="/help"
-            className="flex flex-col items-center p-6 bg-white/90 dark:bg-gray-800/90 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:translate-y-[-5px] backdrop-blur-sm"
-          >
-            <div className="w-16 h-16 flex items-center justify-center bg-blue-100 dark:bg-blue-900 rounded-full mb-4">
-              <Image
-                src="/file.svg"
-                alt="Learn icon"
-                width={32}
-                height={32}
-                className="dark:invert"
-              />
+          {/* Learn More Card - Blue Gradient */}
+          <Link href="/help" className="group flex flex-col h-64 rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-5px]">
+            <div className="bg-gradient-to-br from-blue-500 to-indigo-600 p-6 h-32 flex items-center justify-center">
+              <h2 className="text-3xl font-bold text-white">Learn More</h2>
             </div>
-            <h2 className="text-xl font-semibold mb-2">Learn More</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              Understand adversarial examples and how to interpret the visualizations
-            </p>
+            <div className="bg-gray-800 p-6 flex-grow flex items-center justify-center">
+              <p className="text-sm text-gray-300">
+                Understand adversarial examples and how to interpret the visualizations
+              </p>
+            </div>
           </Link>
           
-          {/* Analytics Card */}
-          <Link 
-            href="/dashboard"
-            className="flex flex-col items-center p-6 bg-white/90 dark:bg-gray-800/90 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:translate-y-[-5px] backdrop-blur-sm"
-          >
-            <div className="w-16 h-16 flex items-center justify-center bg-green-100 dark:bg-green-900 rounded-full mb-4">
-              <Image
-                src="/window.svg"
-                alt="Analytics icon"
-                width={32}
-                height={32}
-                className="dark:invert"
-              />
+          {/* Analytics Card - Purple Gradient */}
+          <Link href="/dashboard" className="group flex flex-col h-64 rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-5px]">
+            <div className="bg-gradient-to-br from-purple-500 to-pink-500 p-6 h-32 flex items-center justify-center">
+              <h2 className="text-3xl font-bold text-white">Analytics</h2>
             </div>
-            <h2 className="text-xl font-semibold mb-2">Analytics</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              Explore Frobenius norm distributions across different models
-            </p>
+            <div className="bg-gray-800 p-6 flex-grow flex items-center justify-center">
+              <p className="text-sm text-gray-300">
+                Explore and evaluate adversarial attacks across different models
+              </p>
+            </div>
           </Link>
           
-          {/* PCA Projection Card */}
-          <Link 
-            href="/pca-visualization"
-            className="flex flex-col items-center p-6 bg-white/90 dark:bg-gray-800/90 rounded-lg shadow-md hover:shadow-lg transition-all duration-300 hover:translate-y-[-5px] backdrop-blur-sm"
-          >
-            <div className="w-16 h-16 flex items-center justify-center bg-purple-100 dark:bg-purple-900 rounded-full mb-4">
-              <Image
-                src="/globe.svg"
-                alt="3D visualization icon"
-                width={32}
-                height={32}
-                className="dark:invert"
-              />
+          {/* PCA Projection Card - Orange Gradient */}
+          <Link href="/pca-visualization" className="group flex flex-col h-64 rounded-lg overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 hover:translate-y-[-5px]">
+            <div className="bg-gradient-to-br from-orange-400 to-yellow-300 p-6 h-32 flex items-center justify-center">
+              <h2 className="text-3xl font-bold text-white">3D PCA</h2>
             </div>
-            <h2 className="text-xl font-semibold mb-2">PCA Projection</h2>
-            <p className="text-sm text-gray-600 dark:text-gray-300">
-              View 3D visualization of adversarial examples in principal component space
-            </p>
+            <div className="bg-gray-800 p-6 flex-grow flex items-center justify-center">
+              <p className="text-sm text-gray-300">
+                View 3D visualization of adversarial examples in principal component space
+              </p>
+            </div>
           </Link>
         </div>
       </main>
