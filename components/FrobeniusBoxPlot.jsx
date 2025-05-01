@@ -304,18 +304,22 @@ const FrobeniusBoxPlot = () => {
       .append('g')
       .attr('transform', `translate(${margin.left},${margin.top})`);
 
-    // Create tooltip div
-    const tooltip = d3.select(tooltipRef.current)
+      //create tooltip div
+      const tooltip = d3.select(tooltipRef.current)
       .style('opacity', 0)
       .attr('class', 'tooltip')
-      .style('background-color', 'rgba(0, 0, 0, 0.8)')
+      .style('background-color', 'rgba(0, 0, 0, 0.85)')
       .style('color', 'white')
       .style('border', 'solid')
       .style('border-width', '1px')
       .style('border-radius', '5px')
-      .style('padding', '10px')
+      .style('padding', '8px')
       .style('position', 'absolute')
-      .style('font-weight', 'bold');
+      .style('font-weight', 'bold')
+      .style('pointer-events', 'none')
+      .style('z-index', '1000')
+      .style('box-shadow', '0 4px 8px rgba(0, 0, 0, 0.3)')
+      .style('transition', 'opacity 0.2s ease-in-out');
 
     // X scale (categorical)
     const x = d3.scaleBand()
@@ -393,6 +397,7 @@ const FrobeniusBoxPlot = () => {
           const groupDescription = currentGroup.description || `Architecture ${currentGroup.name}`;
           
           // Draw the architecture bar
+          // Draw the architecture bar
           const archBar = architectureBars.append('rect')
             .attr('x', groupStartX)
             .attr('y', 0)
@@ -401,8 +406,62 @@ const FrobeniusBoxPlot = () => {
             .attr('fill', currentGroup.color || '#999')
             .attr('opacity', 0.8)
             .style('cursor', 'pointer')
-            // Store the description as a data attribute
-            .attr('data-description', groupDescription);
+            .attr('data-description', groupDescription)
+            .attr('class', 'arch-bar');
+
+          // Create a larger invisible overlay for better hover detection
+          architectureBars.append('rect')
+            .attr('x', groupStartX)
+            .attr('y', -5) // Extend slightly above
+            .attr('width', groupWidth)
+            .attr('height', 40) // Make taller than the visible bar
+            .attr('fill', 'transparent') // Invisible
+            .style('cursor', 'pointer')
+            .attr('data-description', groupDescription)
+            .attr('class', 'arch-bar-hover-area')
+            .on('mouseover', function(event) {
+              // Get the description from the data attribute
+              const description = d3.select(this).attr('data-description');
+              
+              // Highlight the corresponding visible bar
+              const barX = d3.select(this).attr('x');
+              d3.selectAll('.arch-bar')
+                .filter(function() {
+                  return d3.select(this).attr('x') === barX;
+                })
+                .transition()
+                .duration(100)
+                .attr('opacity', 1.0);
+              
+              // Display the tooltip with a short delay for stability
+              tooltip.transition()
+                .duration(50) // Faster appearance
+                .style('opacity', 0.95);
+                
+              tooltip.html(`
+                <div style="font-weight: bold; padding: 6px 10px; min-width: 200px;">
+                  ${description}
+                </div>
+              `)
+                .style('left', (event.pageX + 15) + 'px')
+                .style('top', (event.pageY - 40) + 'px');
+            })
+            .on('mouseout', function() {
+              // Restore original opacity of the visible bar
+              const barX = d3.select(this).attr('x');
+              d3.selectAll('.arch-bar')
+                .filter(function() {
+                  return d3.select(this).attr('x') === barX;
+                })
+                .transition()
+                .duration(200)
+                .attr('opacity', 0.8);
+              
+              // Hide tooltip with a slight delay to prevent flickering
+              tooltip.transition()
+                .duration(300)
+                .style('opacity', 0);
+            });
           
           // Add tooltip behavior
           archBar
@@ -450,6 +509,7 @@ const FrobeniusBoxPlot = () => {
       const groupWidth = groupEndX - groupStartX + x.bandwidth();
       const groupDescription = currentGroup.description || `Architecture ${currentGroup.name}`;
       
+      // Draw the architecture bar
       const archBar = architectureBars.append('rect')
         .attr('x', groupStartX)
         .attr('y', 0)
@@ -458,8 +518,62 @@ const FrobeniusBoxPlot = () => {
         .attr('fill', currentGroup.color || '#999')
         .attr('opacity', 0.8)
         .style('cursor', 'pointer')
-        // Store the description as a data attribute
-        .attr('data-description', groupDescription);
+        .attr('data-description', groupDescription)
+        .attr('class', 'arch-bar');
+
+      // Create a larger invisible overlay for better hover detection
+      architectureBars.append('rect')
+        .attr('x', groupStartX)
+        .attr('y', -5) // Extend slightly above
+        .attr('width', groupWidth)
+        .attr('height', 40) // Make taller than the visible bar
+        .attr('fill', 'transparent') // Invisible
+        .style('cursor', 'pointer')
+        .attr('data-description', groupDescription)
+        .attr('class', 'arch-bar-hover-area')
+        .on('mouseover', function(event) {
+          // Get the description from the data attribute
+          const description = d3.select(this).attr('data-description');
+          
+          // Highlight the corresponding visible bar
+          const barX = d3.select(this).attr('x');
+          d3.selectAll('.arch-bar')
+            .filter(function() {
+              return d3.select(this).attr('x') === barX;
+            })
+            .transition()
+            .duration(100)
+            .attr('opacity', 1.0);
+          
+          // Display the tooltip with a short delay for stability
+          tooltip.transition()
+            .duration(50) // Faster appearance
+            .style('opacity', 0.95);
+            
+          tooltip.html(`
+            <div style="font-weight: bold; padding: 6px 10px; min-width: 200px;">
+              ${description}
+            </div>
+          `)
+            .style('left', (event.pageX + 15) + 'px')
+            .style('top', (event.pageY - 40) + 'px');
+        })
+        .on('mouseout', function() {
+          // Restore original opacity of the visible bar
+          const barX = d3.select(this).attr('x');
+          d3.selectAll('.arch-bar')
+            .filter(function() {
+              return d3.select(this).attr('x') === barX;
+            })
+            .transition()
+            .duration(200)
+            .attr('opacity', 0.8);
+          
+          // Hide tooltip with a slight delay to prevent flickering
+          tooltip.transition()
+            .duration(300)
+            .style('opacity', 0);
+        });
       
       // Add tooltip behavior
       archBar
@@ -781,7 +895,7 @@ const FrobeniusBoxPlot = () => {
               <li>The whiskers extend to the minimum and maximum values (excluding outliers)</li>
               <li>Dots represent outliers (values more than 1.5 × IQR from the box edges)</li>
             </ul>
-            <p className="mt-2">
+            <p className="mt-2 text-purple-600">
               <strong>NOTE:</strong> Models with <b>higher Frobenius norm</b> values are generally <b>more robust</b> against 
               adversarial attacks, as they require larger perturbations to cause misclassification.
             </p>
