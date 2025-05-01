@@ -368,11 +368,13 @@ const PCAVisualization = () => {
           infoPanel.style.display = 'block';
           
           infoPanel.innerHTML = `
-            <div style="font-weight: bold; margin-bottom: 5px;">ID: ${pointData.id}</div>
             <div>Type: ${pointData.type}</div>
             <div>PCA: [${pointData.pc1.toFixed(2)}, ${pointData.pc2.toFixed(2)}, ${pointData.pc3.toFixed(2)}]</div>
-            <div>Label: ${pointData.label}</div>
           `;
+          if (pointData.type !== 'adversarial'){
+            infoPanel.innerHTML += `
+            <div>Digit Image: ${pointData.label}</div>`;
+          }
           
           if (pointData.type === 'adversarial' && pointData.kld !== undefined) {
             infoPanel.innerHTML += `
