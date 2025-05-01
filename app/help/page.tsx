@@ -58,11 +58,11 @@ export default function HelpPage() {
           {/* Video Section */}
           <div className="border-b border-gray-300 dark:border-gray-700 pb-6">
             <h2 className="text-2xl font-semibold text-gray-900 dark:text-white mb-4">
-              Getting Started: Quick Background & Viz Demos
+              Interactive Visualization Demo
             </h2>
             <div className="aspect-w-16 aspect-h-9 bg-gray-200 dark:bg-gray-700 rounded-lg overflow-hidden">
               <iframe 
-                src="https://www.youtube.com/embed/xvFZjo5PgG0" 
+                src="https://www.youtube.com/embed/-l85ILixt5Y" 
                 title="Presentation on Adversarial Examples" 
                 frameBorder="0" 
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
@@ -71,7 +71,7 @@ export default function HelpPage() {
               ></iframe>
             </div>
             <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
-              This short screencast presentation gives a brief summary of background information and a demo of the visualizations.
+              This short screencast presentation gives a brief summary and demo of the visualizations.
             </p>
           </div>
           
