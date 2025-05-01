@@ -24,46 +24,46 @@ const modelConfig = {
     {
       name: "*",
       prefix: "mlp",
-      color: "#7BBCA5", // Green
+      color: "#AD03DE", // Green
       models: ["mlp"]
     },
     {
       name: "A",
       prefix: "auto64",
-      color: "#0D47A1", // Blue
+      color: "#0D0877", // Blue
       models: ["auto64_1", "auto64_2", "auto64_3", "auto64_4"]
     },
     {
       name: "B",
       prefix: "auto128",
-      color: "#E53935", // Red
+      color: "#B12A90", // Red
       models: ["auto128_1", "auto128_2", "auto128_3", "auto128_4", "auto128_5", "auto128_6", "auto128_7"]
     },
     {
       name: "C",
       prefix: "auto256",
-      color: "#B07732", // Brown
+      color: "#E16462", // orange
       models: ["auto256_1", "auto256_2", "auto256_3", "auto256_4", "auto256_5", 
                "auto256_6", "auto256_7", "auto256_8", "auto256_9", "auto256_10"]
     },
     {
       name: "D",
       prefix: "auto512",
-      color: "#6A1B9A", // Purple
+      color: "#FCA636", // peach
       models: ["auto512_1", "auto512_2", "auto512_3", "auto512_4", "auto512_5", 
                "auto512_6", "auto512_7", "auto512_8", "auto512_9", "auto512_10"]
     },
     {
       name: "E",
       prefix: "funkyauto",
-      color: "#00695C", // Teal
+      color: "#FFCF20", // yellow
       models: ["funkyauto_1", "funkyauto_2", "funkyauto_3", "funkyauto_4", "funkyauto_5", 
                "funkyauto_6", "funkyauto_7", "funkyauto_8", "funkyauto_9", "funkyauto_10"]
     },
     {
       name: "F",
       prefix: "hadamard",
-      color: "#F57F17", // Amber
+      color: "#DCE319", // Amber
       models: ["hadamard_1", "hadamard_2", "hadamard_3"]
     }
   ],
@@ -102,6 +102,8 @@ const FrobeniusBoxPlot = () => {
   
   const [totalCount, setTotalCount] = useState(0);
   const [loadProgress, setLoadProgress] = useState({ current: 0, total: 0, percentage: 0 });
+
+
 
   useEffect(() => {
     // Fetch data from Supabase with pagination handling
@@ -274,6 +276,7 @@ const FrobeniusBoxPlot = () => {
     };
     
     fetchData();
+
   }, [kldThreshold]); // Re-fetch when KLD threshold changes
 
   useEffect(() => {
@@ -574,7 +577,29 @@ const FrobeniusBoxPlot = () => {
         }
       }
     });
+    // Add this after you've drawn all the box plots, right before the end of the second useEffect 
+    // (the one that depends on [data, loading, error, kldThreshold])
 
+    // Find the MLP model data
+    const mlpModel = data.find(model => model.model === "mlp");
+
+    // If MLP model exists and has values, draw the threshold line
+    if (mlpModel && mlpModel.values && mlpModel.values.length > 0) {
+      // Calculate median for MLP model
+      const mlpMedian = d3.quantile(mlpModel.values, 0.5) || 0;
+      
+      // Draw horizontal dotted line at MLP median
+      svg.append('line')
+        .attr('x1', 0)
+        .attr('x2', width)
+        .attr('y1', y(safeParse(mlpMedian)))
+        .attr('y2', y(safeParse(mlpMedian)))
+        .attr('stroke', '#AD03DE') // Using the MLP color from modelConfig
+        .attr('stroke-opacity', 0.5)
+        .attr('stroke-width', 2)
+        .attr('stroke-dasharray', '5,5') // This creates the dotted line effect
+        .attr('pointer-events', 'none'); // Prevents the line from interfering with mouse events
+    }  
   }, [data, loading, error, kldThreshold]);
 
   // Handle KLD input change
@@ -641,8 +666,8 @@ const FrobeniusBoxPlot = () => {
             <button
               onClick={applyFilters}
               disabled={loading}
-              className="px-4 py-2 bg-blue-600 text-white rounded shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
+              className="px-4 py-2 bg-purple-600 text-white rounded shadow-sm hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
               {loading ? 'Loading...' : 'FILTER'}
             </button>
           </div>
@@ -661,7 +686,7 @@ const FrobeniusBoxPlot = () => {
             <div className="w-64">
               <div className="bg-gray-200 rounded-full h-2.5 mb-2">
                 <div 
-                  className="bg-blue-600 h-2.5 rounded-full" 
+                  className="bg-purple-600 h-2.5 rounded-full" 
                   style={{ width: `${loadProgress.percentage}%` }}
                 ></div>
               </div>
@@ -687,23 +712,11 @@ const FrobeniusBoxPlot = () => {
               <li>Each box represents the interquartile range (IQR) from 25th to 75th percentile</li>
               <li>The line inside the box shows the median value</li>
               <li>The whiskers extend to the minimum and maximum values (excluding outliers)</li>
-              <li>Red dots represent outliers (values more than 1.5 × IQR from the box edges)</li>
-              <li>For performance, only up to 100 outliers are shown per model</li>
+              <li>Dots represent outliers (values more than 1.5 × IQR from the box edges)</li>
             </ul>
             <p className="mt-2">
-              <strong>Interpretation:</strong> Models with lower Frobenius norm values are generally more robust against 
+              <strong>NOTE:</strong> Models with <b>higher Frobenius norm</b> values are generally <b>more robust</b> against 
               adversarial attacks, as they require larger perturbations to cause misclassification.
-            </p>
-            <p className="mt-2">
-              <strong>Current Filters:</strong> 
-            </p>
-            <ul className="list-disc pl-5 mt-1">
-                <li>KLD ≤ {kldThreshold}</li>
-                <li>Frobenius Norm ≤ {frobThreshold}</li>
-            </ul>
-            <p className="mt-2">
-              <strong>Data Details:</strong> Visualizing {totalExamples.toLocaleString()} examples from a total of {totalCount.toLocaleString()} in the database
-              {totalCount > 0 && ` (${((totalExamples / totalCount) * 100).toFixed(1)}%)`}
             </p>
           </div>
         </div>

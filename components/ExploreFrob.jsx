@@ -116,29 +116,6 @@ const ExploreFrob = () => {
         try {
           console.log('Attempting direct SQL count query by bins...');
           
-          // This SQL will directly count by bins without row limits
-          const sqlQuery = `
-            WITH bin_counts AS (
-              SELECT 
-                floor(frob / 0.25) as bin_number,
-                floor(frob / 0.25) * 0.25 as bin_start,
-                count(*) as count
-              FROM adversarial_examples 
-              WHERE frob IS NOT NULL
-              GROUP BY bin_number, bin_start
-            )
-            SELECT 
-              bin_number,
-              bin_start,
-              bin_start + 0.25 as bin_end,
-              count
-            FROM bin_counts
-            ORDER BY bin_number
-          `;
-          
-          // If you have a way to run raw SQL, use that instead
-          // For now, we'll fall back to client-side binning with a sample
-          
           // Create empty bins (we'll fill client-side if needed)
           const emptyBins = Array.from({ length: 40 }, (_, i) => ({
             binStart: i * 0.25,
@@ -197,7 +174,8 @@ const ExploreFrob = () => {
     
     const margin = { top: 20, right: 30, bottom: 40, left: 30 };
     const width = 900 - margin.left - margin.right;
-    const height = 200 - margin.top - margin.bottom;
+    // Reduce height for more compact visualization
+    const height = 160 - margin.top - margin.bottom;
     
     // Create the SVG
     const svg = d3.select(sliderRef.current)
@@ -224,21 +202,11 @@ const ExploreFrob = () => {
       .range([0, width])
       .clamp(true);
     
-    // Add the title
-    svg.append('text')
-      .attr('x', width / 2)
-      .attr('y', -5)
-      .attr('text-anchor', 'middle')
-      .style('font-size', '16px')
-      .style('font-weight', 'bold')
-      .style('fill', '#000000')
-      .text('What do these adversarial examples look like?');
-    
     // Create tooltip div if it doesn't exist
     if (!document.getElementById('histogram-tooltip')) {
       const tooltipDiv = document.createElement('div');
       tooltipDiv.id = 'histogram-tooltip';
-      tooltipDiv.style.position = 'absolute';
+      tooltipDiv.style.position = 'fixed'; // Use fixed instead of absolute
       tooltipDiv.style.display = 'none';
       tooltipDiv.style.background = 'rgba(0, 0, 0, 0.8)';
       tooltipDiv.style.color = 'white';
@@ -247,7 +215,10 @@ const ExploreFrob = () => {
       tooltipDiv.style.fontSize = '12px';
       tooltipDiv.style.pointerEvents = 'none';
       tooltipDiv.style.zIndex = '100';
-      sliderRef.current.appendChild(tooltipDiv);
+      // Remove the transform that was causing issues
+      // tooltipDiv.style.transform = 'translate(-50%, -100%)';
+      // tooltipDiv.style.marginTop = '-5px';
+      document.body.appendChild(tooltipDiv); // Append to body instead of sliderRef
       tooltipRef.current = tooltipDiv;
     }
     
@@ -256,6 +227,25 @@ const ExploreFrob = () => {
       // Use log scale with +1 to handle zeros
       return count > 0 ? height - (Math.log(count + 1) / Math.log(maxCount + 1)) * height : height;
     };
+    
+    // Create a gradient for the histogram bars
+    const gradient = svg.append("defs")
+      .append("linearGradient")
+      .attr("id", "histogramGradient")
+      .attr("x1", "0%")
+      .attr("y1", "0%")
+      .attr("x2", "0%")
+      .attr("y2", "100%");
+      
+    gradient.append("stop")
+      .attr("offset", "0%")
+      .attr("stop-color", "#9e7de8")
+      .attr("stop-opacity", 0.9);
+      
+    gradient.append("stop")
+      .attr("offset", "100%")
+      .attr("stop-color", "#6a51a3")
+      .attr("stop-opacity", 0.7);
     
     // Draw the histogram bars
     svg.selectAll('.hist-bar')
@@ -267,12 +257,15 @@ const ExploreFrob = () => {
       .attr('y', d => (d.count > 0) ? logScale(d.count) : height) // Use log scaling for better visualization
       .attr('width', d => Math.max(1, x(d.binStart + d.width) - x(d.binStart))) // Ensure minimum width of 1px
       .attr('height', d => (d.count > 0) ? height - logScale(d.count) : 0) // Height based on log scale
-      .attr('fill', '#6a51a3') // Purple color as in the mockup
+      .attr('fill', 'url(#histogramGradient)') // Use gradient instead of solid color
       .attr('stroke', 'none')
       .style('cursor', 'pointer')
       .on('mouseover', function(event, d) {
         // Highlight the bar
-        d3.select(this).attr('fill', '#9e7de8');
+        d3.select(this)
+          .transition()
+          .duration(100)
+          .attr('fill', '#9e7de8');
         
         // Show tooltip
         const tooltip = d3.select('#histogram-tooltip');
@@ -283,12 +276,16 @@ const ExploreFrob = () => {
               Frob: ${d.binStart.toFixed(2)} - ${d.binEnd.toFixed(2)}
             </div>
           `)
-          .style('left', (event.pageX + 10) + 'px')
-          .style('top', (event.pageY - 28) + 'px');
+          // Position tooltip directly at cursor with small offset
+          .style('left', `${event.clientX - 50}px`)
+          .style('top', `${event.clientY - 60}px`);
       })
       .on('mouseout', function() {
         // Restore original color
-        d3.select(this).attr('fill', '#6a51a3');
+        d3.select(this)
+          .transition()
+          .duration(100)
+          .attr('fill', 'url(#histogramGradient)');
         
         // Hide tooltip
         d3.select('#histogram-tooltip').style('display', 'none');
@@ -315,7 +312,7 @@ const ExploreFrob = () => {
       .attr('x2', x.range()[1])
       .attr('y1', height)
       .attr('y2', height)
-      .attr('stroke', '#000000')
+      .attr('stroke', '#222222')
       .attr('stroke-width', 10)
       .attr('stroke-linecap', 'round')
       .style('cursor', 'pointer')
@@ -336,7 +333,8 @@ const ExploreFrob = () => {
       .attr('fill', '#ffffff')
       .attr('stroke', '#000000')
       .attr('stroke-width', 2)
-      .style('cursor', 'grab');
+      .style('cursor', 'grab')
+      .style('filter', 'drop-shadow(0 0 6px white)');
     
     // Add the value text
     const valueText = svg.append('text')
@@ -350,14 +348,19 @@ const ExploreFrob = () => {
       .style('fill', '#000000')
       .text(frobValue.toFixed(2));
     
-    // Create dragging behavior
+    // Create dragging behavior - FIXED VERSION
     const drag = d3.drag()
       .on('start', function() {
         d3.select(this).style('cursor', 'grabbing');
       })
       .on('drag', function(event) {
         // Calculate new position with constraints
-        const newX = Math.max(0, Math.min(width, event.x));
+        // Use the mouse position relative to the svg container
+        const svgBounds = sliderRef.current.querySelector('svg').getBoundingClientRect();
+        const relativeX = event.sourceEvent.clientX - svgBounds.left - margin.left;
+        
+        // Ensure we stay within bounds
+        const newX = Math.max(0, Math.min(width, relativeX));
         const value = x.invert(newX);
         const roundedValue = Math.round(value * 100) / 100;
         
@@ -500,6 +503,29 @@ const ExploreFrob = () => {
 
   return (
     <div className="p-4 max-w-5xl mx-auto">
+      {/* Title Box */}
+      <div className="mb-4 bg-gray-100 p-4 rounded-lg shadow-sm">
+        <div className="flex flex-wrap items-center">
+          <div className="flex-1">
+            <h2 className="text-lg text-black font-semibold">The Visual Impact of Perturbation Magnitude</h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Move the slider to compare the impact of various Frobenius (Frob) norm. This visualization pulls from the entire dataset 
+              of adversarial examples, and displays the original image and adversarial example pair with a Frob value closest to the
+              one you selected. The histogram shows the distribution of Frob norms across the dataset (40,440 rows). 
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Dataset Info - Moved above the slider */}
+      <div className="mb-2 text-center text-sm text-gray-600">
+        {!histogramLoading && (
+          <span>
+            Distribution of Frobenius norm values across entire dataset
+          </span>
+        )}
+      </div>
+      
       {/* D3 Histogram Slider */}
       <div className="mb-6 flex justify-center">
         <div ref={sliderRef} className="w-full relative"></div>
@@ -507,7 +533,7 @@ const ExploreFrob = () => {
       
       {/* Loading indicator for histogram */}
       {histogramLoading && (
-        <div className="text-center py-2 text-blue-700 font-medium">
+        <div className="text-center py-2 text-purple-800 font-medium">
           Loading histogram data...
         </div>
       )}
@@ -518,51 +544,58 @@ const ExploreFrob = () => {
           <div className="inline-block animate-spin rounded-full h-6 w-6 border-t-2 border-b-2 border-gray-900"></div>
         </div>
       ) : example ? (
-        <div className="flex justify-between items-center">
-          {/* Original Image */}
-          <div className="text-center">
-            <div className="bg-black p-4 inline-block">
-              <img 
-                src={formatImageData(example.image)} 
-                alt="Original Image"
-                style={{ 
-                  imageRendering: 'pixelated',
-                  width: '168px',  // 28px * 6
-                  height: '168px'  // 28px * 6
-                }}
-              />
+        <div className="flex justify-center items-center mt-4">
+          <div className="flex items-center gap-2">
+            {/* Original Image */}
+            <div className="flex flex-col items-center">
+              <div className="bg-gray-800 p-4 inline-block">
+                <img 
+                  src={formatImageData(example.image)} 
+                  alt="Original Image"
+                  style={{ 
+                    imageRendering: 'pixelated',
+                    width: '252px',
+                    height: '252px',
+                    filter: 'drop-shadow(0 0 8px gray)'
+                  }}
+                />
+              </div>
+              <p className="mt-2 text-center text-black"><b>Original Image</b></p>
             </div>
-            <p className="mt-2 text-center text-black">Original Image</p>
-          </div>
-          
-          {/* Arrow with metrics inside it */}
-          <div className="flex flex-col items-center justify-center px-4">
-            <svg width="200" height="60">
-              {/* Arrow background */}
-              <rect x="0" y="15" width="170" height="30" fill="#000" rx="5" />
-              {/* Arrow head */}
-              <polygon points="165,5 165,55 200,30" fill="#000" />
-              {/* Arrow text */}
-              <text x="85" y="35" textAnchor="middle" fill="#ffffff" fontWeight="bold" fontSize="14">
-                Frobenius Norm: {example.frob.toFixed(4)}
-              </text>
-            </svg>
-          </div>
-          
-          {/* Adversarial Image */}
-          <div className="text-center">
-            <div className="bg-gray-800 p-4 inline-block">
-              <img 
-                src={formatImageData(example.adversarial_image)} 
-                alt="Adversarial Image"
-                style={{ 
-                  imageRendering: 'pixelated',
-                  width: '168px',  // 28px * 6
-                  height: '168px'  // 28px * 6
-                }}
-              />
+            
+            {/* Arrow with metrics */}
+            <div className="mx-2">
+              <svg width="160" height="60">
+                <defs>
+                  <linearGradient id="purple-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#a855f7" /> {/* light purple */}
+                    <stop offset="100%" stopColor="#7e22ce" /> {/* dark purple */}
+                  </linearGradient>
+                </defs>
+                <rect x="0" y="15" width="130" height="30" fill="url(#purple-gradient)" rx="5" />
+                <polygon points="125,5 125,55 160,30" fill="#7e22ce" />
+                <text x="65" y="35" textAnchor="middle" fill="#ffffff" fontWeight="bold" fontSize="14">
+                  Actual Frob: {example.frob.toFixed(2)}
+                </text>
+              </svg>
             </div>
-            <p className="mt-2 text-center text-black">Adversarial Example</p>
+            
+            {/* Adversarial Image */}
+            <div className="flex flex-col items-center">
+              <div className="bg-gray-800 p-4 inline-block">
+                <img 
+                  src={formatImageData(example.adversarial_image)} 
+                  alt="Adversarial Image"
+                  style={{ 
+                    imageRendering: 'pixelated',
+                    width: '252px',
+                    height: '252px',
+                    filter: 'drop-shadow(0 0 8px gray)'
+                  }}
+                />
+              </div>
+              <p className="mt-2 text-center text-black"><b>Adversarial Example</b></p>
+            </div>
           </div>
         </div>
       ) : (
@@ -570,15 +603,6 @@ const ExploreFrob = () => {
           <p className="text-gray-500">No example found with Frobenius norm close to {frobValue.toFixed(2)}</p>
         </div>
       )}
-      
-      {/* Show data stats */}
-      <div className="mt-4 text-center text-sm text-gray-500">
-        {!histogramLoading && (
-          <span>
-            Showing distribution of {totalExamples.toLocaleString()} adversarial examples
-          </span>
-        )}
-      </div>
     </div>
   );
 };
