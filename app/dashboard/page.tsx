@@ -39,7 +39,7 @@ export default function DashboardPage() {
           onClick={() => setShowExplorer(!showExplorer)}
           className="px-4 py-2 bg-purple-600 text-white rounded shadow-sm hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50"
           >
-          {showExplorer ? 'Hide Example Explorer' : 'Show Example Explorer'}
+          {showExplorer ? 'Hide Perturbation Explorer' : 'Show Perturbation Explorer'}
         </button>
       </div>
       
