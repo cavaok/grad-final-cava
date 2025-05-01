@@ -67,7 +67,7 @@ export default function HelpPage() {
                 frameBorder="0" 
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
                 allowFullScreen
-                className="w-full h-full"
+                className="w-full" width="656" height="369"
               ></iframe>
             </div>
             <p className="mt-4 text-sm text-gray-600 dark:text-gray-400">
